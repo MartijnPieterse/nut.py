@@ -19,7 +19,7 @@ con = None
 con = sqlite3.connect("/home/pieterse/Compile/nut_tcltk/nut.sqlite")
 cur = con.cursor()
 
-sql = "SELECT Tagname FROM nutr_def"
+sql = "SELECT Tagname,Units FROM nutr_def"
 cur.execute(sql)
 
 all_food_nutr = []
@@ -27,7 +27,53 @@ while True:
     data = cur.fetchone()
 
     if data == None: break
-    all_food_nutr.append(data[0])
+    all_food_nutr.append((data[0], data[1]))
+
+def sqlGetNutrName(id):
+    sql = "SELECT NutrDesc FROM nutr_def WHERE Nutr_No=" + repr(id)
+    cur.execute(sql)
+    data = cur.fetchone()
+
+    if data == None: return "None"
+    return data[0]
+
+def sqlGetNutrTagName(id):
+    sql = "SELECT Tagname FROM nutr_def WHERE Nutr_No=" + repr(id)
+    cur.execute(sql)
+    data = cur.fetchone()
+
+    if data == None: return "None"
+    return data[0]
+
+def sqlGetNutrUnit(id):
+    sql = "SELECT Units FROM nutr_def WHERE Nutr_No=" + repr(id)
+    cur.execute(sql)
+    data = cur.fetchone()
+
+    if data == None: return "--"
+    return data[0]
+
+# Layout should move into the database, probably.
+# For now:
+# None = Empty
+# Negative values are special.
+# -1 = Prot/Carb/Fat
+# -2 = Omega 6/3 Balance
+layout = [ [  208,  205,  203 ],
+           [   -1,  291, 2000 ],
+           [ None, None, None ],
+           [  204,  401,  301 ],
+           [  606,  404,  312 ],
+           [  645,  405,  303 ],
+           [  646,  406,  304 ],
+           [ 2006,  410,  315 ],
+           [ 2001,  415,  305 ],
+           [ 2002,  431,  306 ],
+           [ 2007,  418,  317 ],
+           [ 2003,  318,  307 ],
+           [ 2004,  324,  309 ],
+           [ 2005, 2008, None ],
+           [  601,  430,   -2 ] ]
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -81,6 +127,7 @@ class viewfoodTab:
 
         self.sel_search_results = t.get_selection()
 
+        self.createNutritionTabs(builder.get_object("table1"))
         ### Make all connections
     
         # Connect search entry
@@ -88,6 +135,42 @@ class viewfoodTab:
 
         # Connect search results to update nutrients when chosen
         self.sel_search_results.connect("changed", self.onFoodChanged)
+
+    def createNutritionTabs(self, table):
+        # First Set Size!
+        table.resize(len(layout[0])*3, len(layout))
+
+        self.crossref = { }
+        # Add dummy labels to every unit
+        for i in xrange(len(layout)):
+            for j in xrange(len(layout[i])):
+                l = layout[i][j]
+
+                label1 = gtk.Label()
+                label2 = gtk.Label()
+                label3 = gtk.Label()
+
+                top = i
+                bottom = i+1
+
+                if l == None:
+                    pass
+                elif l < 0:
+                    label1.set_text("***Special***")
+                else:
+                    label1.set_text(sqlGetNutrName(l))
+                    label2.set_alignment(1.0, 0.5)
+                    label3.set_text(" "+sqlGetNutrUnit(l))
+                    label3.set_alignment(0.0, 0.5)
+
+                    self.crossref[l] = label2
+
+                left = j*3
+                right = j*3+1
+                table.attach(label1, left, right, top, bottom)
+                table.attach(label2, left+1, right+1, top, bottom)
+                table.attach(label3, left+2, right+2, top, bottom)
+
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     def entry_vft_search_changed_cb(self, entry):
@@ -122,7 +205,7 @@ class viewfoodTab:
     #
         (model, pathlist) = self.sel_search_results.get_selected_rows()
         
-        assert len(pathlist) == 1
+        assert len(pathlist) <= 1
         for path in pathlist :
             tree_iter = model.get_iter(path)
             value0 = model.get_value(tree_iter,0)
@@ -130,20 +213,37 @@ class viewfoodTab:
 
             # Create SQL
             sql = "SELECT "
-            for n in all_food_nutr:
-                sql += n + ","
+
+            for i in layout:
+                for j in i:
+                    if j != None and j >= 0: sql += sqlGetNutrTagName(j) + ",";
+
             sql = sql.rstrip(",") + " FROM food_des WHERE NDB_No=%s" % (value0)
+
+            #print sql
 
             cur.execute(sql)
             
             data = cur.fetchone()
 
-            for n,d in zip(all_food_nutr, data):
-                e = self.builder.get_object("vf_nut_"+n)
+            data_index = 0
+            for i in layout:
+                for j in i:
+                    if j != None and j>=0:
+                        if data[data_index] != None:
 
-                if e != None:
-                    if d != None: e.set_text(repr(d))
-                    else: e.set_text("(nd)")
+                            t = float(data[data_index])
+
+                            t = ("%.3f" % (t)).rstrip("0").rstrip(".")
+
+                            self.crossref[j].set_text(t)
+                            #print j, t, len(t)
+                        else:
+                            self.crossref[j].set_text("(nd)")
+                        data_index += 1
+            # TODO Some sort of redraw??
+                          
+
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -154,6 +254,43 @@ class nutWindowHandlers:
 #
     def windowNutMain_delete_event_cb(self, *args):
         gtk.main_quit(args)
+
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class testTab:
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Purpose:
+#   Test if Nutrient Tabs Generator can work
+#
+    def __init__(self, builder):
+
+        table = builder.get_object("testTable")
+
+        # First Set Size!
+        table.resize(len(layout[0]), len(layout))
+
+        # Add dummy labels to every unit
+        for i in xrange(len(layout)):
+            for j in xrange(len(layout[i])):
+                l = layout[i][j]
+
+                label1 = gtk.Label()
+                label2 = gtk.Label()
+
+                top = i
+                bottom = i+1
+
+                if l == None:
+                    pass
+                elif l < 0:
+                    label1.set_text("***Special***")
+                else:
+                    label1.set_text(sqlGetNutrName(l))
+
+                left = j*2
+                right = j*2+1
+                table.attach(label1, left, right, top, bottom)
+                table.attach(label2, left+1, right+1, top, bottom)
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -172,6 +309,8 @@ def nutMain():
 
 
     xxx = viewfoodTab(builder)
+
+    yyy = testTab(builder)
 
     # Show off
     window = builder.get_object("windowNutMain")
