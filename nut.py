@@ -458,7 +458,7 @@ def nutMain():
 #   bla
 #
     builder = gtk.Builder()
-    builder.add_from_file("nut.glade")
+    builder.add_from_file("nut_try.glade")
 
     builder.connect_signals(nutWindowHandlers())
 

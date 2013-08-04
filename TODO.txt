@@ -1,0 +1,4 @@
+o Add LICENSE
+o Give widgets sensible names
+  Should the UI be auto-generated? Depending on fields in database?
+o
