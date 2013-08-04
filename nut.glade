@@ -286,7 +286,7 @@ b. Nutrients is dan totaal of %? van het gekozene</property>
                               </packing>
                             </child>
                             <child>
-                              <object class="GtkSpinButton" id="spinbutton1">
+                              <object class="GtkSpinButton" id="vf_spinb_amount">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="invisible_char">●</property>
@@ -295,6 +295,7 @@ b. Nutrients is dan totaal of %? van het gekozene</property>
                                 <property name="primary_icon_sensitive">True</property>
                                 <property name="secondary_icon_sensitive">True</property>
                                 <property name="adjustment">adjustment1</property>
+                                <property name="digits">2</property>
                               </object>
                               <packing>
                                 <property name="expand">True</property>
@@ -376,7 +377,7 @@ b. Nutrients is dan totaal of %? van het gekozene</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkTable" id="table1">
+                      <object class="GtkTable" id="vf_notebook_table_nutrients">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <child>
@@ -399,10 +400,12 @@ b. Nutrients is dan totaal of %? van het gekozene</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="label24">
+                      <object class="GtkTable" id="vf_notebook_table_carbsamino">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">label</property>
+                        <child>
+                          <placeholder/>
+                        </child>
                       </object>
                       <packing>
                         <property name="position">2</property>
@@ -420,10 +423,12 @@ b. Nutrients is dan totaal of %? van het gekozene</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="label25">
+                      <object class="GtkTable" id="vf_notebook_table_miscellaneous">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">label</property>
+                        <child>
+                          <placeholder/>
+                        </child>
                       </object>
                       <packing>
                         <property name="position">3</property>
@@ -441,10 +446,12 @@ b. Nutrients is dan totaal of %? van het gekozene</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="label26">
+                      <object class="GtkTable" id="vf_notebook_table_fat1">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">label</property>
+                        <child>
+                          <placeholder/>
+                        </child>
                       </object>
                       <packing>
                         <property name="position">4</property>
@@ -462,10 +469,12 @@ b. Nutrients is dan totaal of %? van het gekozene</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="label27">
+                      <object class="GtkTable" id="vf_notebook_table_fat2">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">label</property>
+                        <child>
+                          <placeholder/>
+                        </child>
                       </object>
                       <packing>
                         <property name="position">5</property>

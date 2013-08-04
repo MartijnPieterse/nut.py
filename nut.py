@@ -1,4 +1,6 @@
 #!/bin/env python
+#
+
 import sqlite3
 import sys
 try:
@@ -53,27 +55,108 @@ def sqlGetNutrUnit(id):
     if data == None: return "--"
     return data[0]
 
+def sqlGetWeightFor(id):
+    sql = "SELECT Msre_Desc,Amount,whectograms FROM weight WHERE NDB_No=" + repr(id) + " ORDER BY Seq"
+
+    cur.execute(sql)
+    data = cur.fetchone()
+
+    result = []
+
+    while data != None:
+        result.append([data[0], data[1], data[2]])
+
+        data = cur.fetchone()
+
+    return result
+
 # Layout should move into the database, probably.
 # For now:
 # None = Empty
 # Negative values are special.
 # -1 = Prot/Carb/Fat
 # -2 = Omega 6/3 Balance
-layout = [ [  208,  205,  203 ],
-           [   -1,  291, 2000 ],
-           [ None, None, None ],
-           [  204,  401,  301 ],
-           [  606,  404,  312 ],
-           [  645,  405,  303 ],
-           [  646,  406,  304 ],
-           [ 2006,  410,  315 ],
-           [ 2001,  415,  305 ],
-           [ 2002,  431,  306 ],
-           [ 2007,  418,  317 ],
-           [ 2003,  318,  307 ],
-           [ 2004,  324,  309 ],
-           [ 2005, 2008, None ],
-           [  601,  430,   -2 ] ]
+layout = { "nutrients": [ [  208,  205,  203 ],
+                          [   -1,  291, 2000 ],
+                          [ None, None, None ],
+                          [  204,  401,  301 ],
+                          [  606,  404,  312 ],
+                          [  645,  405,  303 ],
+                          [  646,  406,  304 ],
+                          [ 2006,  410,  315 ],
+                          [ 2001,  415,  305 ],
+                          [ 2002,  431,  306 ],
+                          [ 2007,  418,  317 ],
+                          [ 2003,  318,  307 ],
+                          [ 2004,  324,  309 ],
+                          [ 2005, 2008, None ],
+                          [  601,  430,   -2 ]
+                        ],
+           "carbsamino": [ [ None, None, None ],
+                           [ None, None, None ],
+                           [  205,  203,  504 ],
+                           [  291,  257,  505 ],
+                           [  209,  513,  506 ],
+                           [  269,  511,  508 ],
+                           [  212,  514,  517 ],
+                           [  287,  507,  518 ],
+                           [  211,  515,  502 ],
+                           [  213,  516,  501 ],
+                           [  214,  512,  509 ],
+                           [  210,  521,  510 ],
+                           [ None,  503, None ],
+                           [ None, None, None ],
+                           [ None, None, None ]
+                         ],
+           "miscellaneous": [ [ None, None, None ],
+                              [  268,  319,  343 ],
+                              [  207,  320,  322 ],
+                              [  255,  325,  321 ],
+                              [  262,  326,  334 ],
+                              [  263,  328,  338 ],
+                              [  221,  578,  337 ],
+                              [  313,  573,  601 ],
+                              [  454,  429,  636 ],
+                              [  421,  428,  641 ],
+                              [  431,  323,  639 ],
+                              [  432,  341,  638 ],
+                              [  435,  342, None ],
+                              [ None, None, None ],
+                              [ None, None, None ]
+                            ],
+           "fat1" : [ [  606, None ],
+                      [  607,  645 ],
+                      [  608,  625 ],
+                      [  609,  697 ],
+                      [  610,  626 ],
+                      [  611,  673 ],
+                      [  696,  687 ],
+                      [  612,  617 ],
+                      [  652,  674 ],
+                      [  613,  628 ],
+                      [  653,  630 ],
+                      [  614,  676 ],
+                      [  615,  671 ],
+                      [  624, None ],
+                      [  654, None ]
+                    ],
+           "fat2" : [ [ None, None, None ],
+                      [ None, None,  605 ],
+                      [ None,  689,  693 ],
+                      [  646,  852,  662 ],
+                      [  618,  853,  663 ],
+                      [  672,  620,  859 ],
+                      [  619,  855,  664 ],
+                      [  851,  629,  695 ],
+                      [  685,  857,  666 ],
+                      [  627,  858,  665 ],
+                      [  672,  631,  669 ],
+                      [ None,  621,  670 ],
+                      [ None, None,  856 ],
+                      [ None, None, None ],
+                      [ None, None, None ]
+                    ]
+         }
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -100,16 +183,17 @@ class viewfoodTab:
 
         # Setup the combobox for the serving size
         self.combobox = builder.get_object("combobox_vft_servingsize")
-        ls_combobox = gtk.ListStore(str)
-        ls_combobox.append(["g"])
-        ls_combobox.append(["oz"])
-        ls_combobox.append(["servings"])
+        self.ls_combobox = gtk.ListStore(str, float, float)
 
-        self.combobox.set_model(ls_combobox)
+        self.combobox.set_model(self.ls_combobox)
         cell = gtk.CellRendererText()
         self.combobox.pack_start(cell, True)
         self.combobox.add_attribute(cell, 'text', 0)
         self.combobox.set_active(0)
+        self.combobox.connect("changed", self.combobox_changed_cb)
+
+        builder.get_object("vf_spinb_amount").connect("changed", self.onSpinB_cb)
+
 
         # Setup the search results
 
@@ -127,7 +211,7 @@ class viewfoodTab:
 
         self.sel_search_results = t.get_selection()
 
-        self.createNutritionTabs(builder.get_object("table1"))
+        self.createNutritionTabs()
         ### Make all connections
     
         # Connect search entry
@@ -136,40 +220,45 @@ class viewfoodTab:
         # Connect search results to update nutrients when chosen
         self.sel_search_results.connect("changed", self.onFoodChanged)
 
-    def createNutritionTabs(self, table):
-        # First Set Size!
-        table.resize(len(layout[0])*3, len(layout))
+        
+
+    def createNutritionTabs(self):
 
         self.crossref = { }
-        # Add dummy labels to every unit
-        for i in xrange(len(layout)):
-            for j in xrange(len(layout[i])):
-                l = layout[i][j]
+        for k in layout.keys():
+            table = self.builder.get_object("vf_notebook_table_"+k)
+            # First Set Size!
+            table.resize(len(layout[k][0])*3, len(layout[k]))
 
-                label1 = gtk.Label()
-                label2 = gtk.Label()
-                label3 = gtk.Label()
+            # Add dummy labels to every unit
+            for i in xrange(len(layout[k])):
+                for j in xrange(len(layout[k][i])):
+                    l = layout[k][i][j]
 
-                top = i
-                bottom = i+1
+                    label1 = gtk.Label()
+                    label2 = gtk.Label()
+                    label3 = gtk.Label()
 
-                if l == None:
-                    pass
-                elif l < 0:
-                    label1.set_text("***Special***")
-                else:
-                    label1.set_text(sqlGetNutrName(l))
-                    label2.set_alignment(1.0, 0.5)
-                    label3.set_text(" "+sqlGetNutrUnit(l))
-                    label3.set_alignment(0.0, 0.5)
+                    top = i
+                    bottom = i+1
 
-                    self.crossref[l] = label2
+                    if l == None:
+                        pass
+                    elif l < 0:
+                        label1.set_text("***Special***")
+                    else:
+                        label1.set_text(sqlGetNutrName(l))
+                        label2.set_alignment(1.0, 0.5)
+                        label3.set_text(" "+sqlGetNutrUnit(l))
+                        label3.set_alignment(0.0, 0.5)
 
-                left = j*3
-                right = j*3+1
-                table.attach(label1, left, right, top, bottom)
-                table.attach(label2, left+1, right+1, top, bottom)
-                table.attach(label3, left+2, right+2, top, bottom)
+                        self.crossref[k+repr(l)] = label2
+
+                    left = j*3
+                    right = j*3+1
+                    table.attach(label1, left, right, top, bottom)
+                    table.attach(label2, left+1, right+1, top, bottom)
+                    table.attach(label3, left+2, right+2, top, bottom)
 
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -210,15 +299,34 @@ class viewfoodTab:
             tree_iter = model.get_iter(path)
             value0 = model.get_value(tree_iter,0)
             value1 = model.get_value(tree_iter,1)
+            
+            # Update combobox
 
+            self.ls_combobox.clear()
+            w = sqlGetWeightFor(value0)
+            for i in w:
+                self.ls_combobox.append([i[0], i[1], i[2]])
+            self.combobox.set_active(0)
+            self.builder.get_object("vf_spinb_amount").set_value(float(w[0][1]))
+
+            # Set multiplier
+            multiplier = float(w[0][2])
+
+            self.updateAllNutrients(value0, multiplier)
+
+
+        self.builder.get_object("windowNutMain").queue_draw()
+
+    def updateAllNutrients(self, nut_id, multiplier):
+        for k in layout.keys():
             # Create SQL
             sql = "SELECT "
 
-            for i in layout:
+            for i in layout[k]:
                 for j in i:
                     if j != None and j >= 0: sql += sqlGetNutrTagName(j) + ",";
 
-            sql = sql.rstrip(",") + " FROM food_des WHERE NDB_No=%s" % (value0)
+            sql = sql.rstrip(",") + " FROM food_des WHERE NDB_No=%s" % (nut_id)
 
             #print sql
 
@@ -227,23 +335,71 @@ class viewfoodTab:
             data = cur.fetchone()
 
             data_index = 0
-            for i in layout:
+            for i in layout[k]:
                 for j in i:
                     if j != None and j>=0:
+                        self.crossref[k+repr(j)].set_text("")
                         if data[data_index] != None:
 
-                            t = float(data[data_index])
+                            t = float(data[data_index]) * multiplier
 
                             t = ("%.3f" % (t)).rstrip("0").rstrip(".")
 
-                            self.crossref[j].set_text(t)
+                            self.crossref[k+repr(j)].set_text(t)
                             #print j, t, len(t)
                         else:
-                            self.crossref[j].set_text("(nd)")
+                            self.crossref[k+repr(j)].set_text("(nd)")
                         data_index += 1
             # TODO Some sort of redraw??
-                          
+            #??self.builder.get_object("table1").queue_draw()
 
+
+
+    def combobox_changed_cb(self, e):
+        a = self.combobox.get_active()
+
+        if a != -1:
+            i = self.ls_combobox.get_iter_first()
+
+            for dummy in xrange(a): i = self.ls_combobox.iter_next(i)
+
+            self.builder.get_object("vf_spinb_amount").set_value(self.ls_combobox.get_value(i, 1))
+
+            if i != None:
+                multiplier = self.ls_combobox.get_value(i, 2)
+
+                (model, pathlist) = self.sel_search_results.get_selected_rows()
+                
+                assert len(pathlist) <= 1
+                for path in pathlist :
+                    tree_iter = model.get_iter(path)
+                    value0 = model.get_value(tree_iter,0)
+
+                self.updateAllNutrients(value0, multiplier)
+
+
+    def onSpinB_cb(self, e):
+        spv = float( self.builder.get_object("vf_spinb_amount").get_value() )
+        a = self.combobox.get_active()
+
+        if a != -1:
+            i = self.ls_combobox.get_iter_first()
+
+            for dummy in xrange(a): i = self.ls_combobox.iter_next(i)
+
+            if i != None:
+                multiplier = self.ls_combobox.get_value(i, 2)
+
+                spv = spv / float(self.ls_combobox.get_value(i, 1))
+
+                (model, pathlist) = self.sel_search_results.get_selected_rows()
+                
+                assert len(pathlist) <= 1
+                for path in pathlist :
+                    tree_iter = model.get_iter(path)
+                    value0 = model.get_value(tree_iter,0)
+
+                self.updateAllNutrients(value0, multiplier*spv)
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -310,7 +466,7 @@ def nutMain():
 
     xxx = viewfoodTab(builder)
 
-    yyy = testTab(builder)
+#    yyy = testTab(builder)
 
     # Show off
     window = builder.get_object("windowNutMain")
