@@ -70,6 +70,12 @@ def sqlGetWeightFor(id):
 
     return result
 
+def sqlGetFoodNutrientValue(food_id, field_ids):
+    sql = "SELECT "
+
+    for field in fields:
+        sql += "X"
+
 # Layout should move into the database, probably.
 # For now:
 # None = Empty
@@ -159,6 +165,204 @@ layout = { "nutrients": [ [  208,  205,  203 ],
          }
 
 
+layout2 = [ [ "Daily %", [ [  208,  205,  203 ],        # TODO, dit is allemaal special.
+                           [   -1,  291, 2000 ],
+                           [ None, None, None ],
+                           [  204,  401,  301 ],
+                           [  606,  404,  312 ],
+                           [  645,  405,  303 ],
+                           [  646,  406,  304 ],
+                           [ 2006,  410,  315 ],
+                           [ 2001,  415,  305 ],
+                           [ 2002,  431,  306 ],
+                           [ 2007,  418,  317 ],
+                           [ 2003,  318,  307 ],
+                           [ 2004,  324,  309 ],
+                           [ 2005, 2008, None ],
+                           [  601,  430,   -2 ] ] ],
+
+            [ "Nutrients", [ [  208,  205,  203 ],
+                             [   -1,  291, 2000 ],
+                             [ None, None, None ],
+                             [  204,  401,  301 ],
+                             [  606,  404,  312 ],
+                             [  645,  405,  303 ],
+                             [  646,  406,  304 ],
+                             [ 2006,  410,  315 ],
+                             [ 2001,  415,  305 ],
+                             [ 2002,  431,  306 ],
+                             [ 2007,  418,  317 ],
+                             [ 2003,  318,  307 ],
+                             [ 2004,  324,  309 ],
+                             [ 2005, 2008, None ],
+                             [  601,  430,   -2 ] ] ],
+
+            [ "Carbs & Amino Acids", [ [ None, None, None ],
+                                       [ None, None, None ],
+                                       [  205,  203,  504 ],
+                                       [  291,  257,  505 ],
+                                       [  209,  513,  506 ],
+                                       [  269,  511,  508 ],
+                                       [  212,  514,  517 ],
+                                       [  287,  507,  518 ],
+                                       [  211,  515,  502 ],
+                                       [  213,  516,  501 ],
+                                       [  214,  512,  509 ],
+                                       [  210,  521,  510 ],
+                                       [ None,  503, None ],
+                                       [ None, None, None ],
+                                       [ None, None, None ] ] ],
+
+             [ "Miscellaneous", [ [ None, None, None ],
+                                  [  268,  319,  343 ],
+                                  [  207,  320,  322 ],
+                                  [  255,  325,  321 ],
+                                  [  262,  326,  334 ],
+                                  [  263,  328,  338 ],
+                                  [  221,  578,  337 ],
+                                  [  313,  573,  601 ],
+                                  [  454,  429,  636 ],
+                                  [  421,  428,  641 ],
+                                  [  431,  323,  639 ],
+                                  [  432,  341,  638 ],
+                                  [  435,  342, None ],
+                                  [ None, None, None ],
+                                  [ None, None, None ] ] ],
+
+             [ "Sat & Mono FA", [ [  606, None ],
+                                  [  607,  645 ],
+                                  [  608,  625 ],
+                                  [  609,  697 ],
+                                  [  610,  626 ],
+                                  [  611,  673 ],
+                                  [  696,  687 ],
+                                  [  612,  617 ],
+                                  [  652,  674 ],
+                                  [  613,  628 ],
+                                  [  653,  630 ],
+                                  [  614,  676 ],
+                                  [  615,  671 ],
+                                  [  624, None ],
+                                  [  654, None ] ] ],
+
+             [ "Poly & Trans FA", [ [ None, None, None ],
+                                    [ None, None,  605 ],
+                                    [ None,  689,  693 ],
+                                    [  646,  852,  662 ],
+                                    [  618,  853,  663 ],
+                                    [  672,  620,  859 ],
+                                    [  619,  855,  664 ],
+                                    [  851,  629,  695 ],
+                                    [  685,  857,  666 ],
+                                    [  627,  858,  665 ],
+                                    [  672,  631,  669 ],
+                                    [ None,  621,  670 ],
+                                    [ None, None,  856 ],
+                                    [ None, None, None ],
+                                    [ None, None, None ] ] ]
+         ]
+
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class User:
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Purpose:
+#   Has all data concerning the user.
+#   Daily Values, Weight, Options
+#
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    def __init__(self):
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # Purpose:
+    #   Initialize.
+    # Input:
+    #   SQL reference
+        pass
+
+class nutritionTabs:
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Purpose:
+#   Created a notebook with all the nutritionfields in the tabs.
+#   Has a update function.
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    def __init__(self, parent, layout, user):
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # Purpose:
+    #   Create Notebook
+    #       Create Tabs (according to given layout)
+    #       Create nutrient fields (according to the given layout)
+    #   Store the user for conversions.
+
+        self.user = user
+        self.parent = parent
+        self.layout = layout
+        self.crossref = {}
+    
+        self.notebook_widget = gtk.Notebook()
+
+        for tabdata in layout:
+            tabname = tabdata[0]
+
+            # create label for tab
+            tabnamelabel = gtk.Label()
+            tabnamelabel.set_text(tabname)
+
+            # create content for tab
+            tabcontent = gtk.Table()
+
+            # Set size. Need 3 columns for every field.
+            rows = len(tabdata[1])
+            columns = len(tabdata[1][0])
+            tabcontent.resize(columns*3, rows)
+
+            for row in xrange(rows):
+                for column in xrange(columns):
+                    nutrient_id = tabdata[1][row][column]
+
+                    label_description = gtk.Label()
+                    label_value       = gtk.Label()
+                    label_units       = gtk.Label()
+
+                    top = row
+                    bottom = row+1
+
+                    if nutrient_id == None:
+                        pass
+                    elif nutrient_id < 0:
+                        label_description.set_text("***Special***")
+                    else:
+                        label_description.set_text(sqlGetNutrName(nutrient_id))
+                        label_value.set_alignment(1.0, 0.5)
+                        label_units.set_text(" "+sqlGetNutrUnit(nutrient_id))
+                        label_units.set_alignment(0.0, 0.5)
+
+                        # Store for later referense.
+                        # TODO Some fieldids could be used more than once!
+                        self.crossref[tabname+repr(nutrient_id)] = label_value
+
+                    left = column*3
+                    right = column*3+1
+                    tabcontent.attach(label_description, left, right, top, bottom)
+                    tabcontent.attach(label_value, left+1, right+1, top, bottom)
+                    tabcontent.attach(label_units, left+2, right+2, top, bottom)
+
+            self.notebook_widget.append_page(tabcontent, tabnamelabel)
+
+        parent.attach(self.notebook_widget, 0, 1, 0, 1)
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    def sql_update(self, food_id, multiplier):
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # Purpose:
+    #   Retrieve food information from database.
+    #   Multiply all ingredients with multiplier and update all fields.
+    #   If user is set, use information from there.
+        pass
+
+
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class viewfoodTab:
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -173,8 +377,8 @@ class viewfoodTab:
     # Purpose:
     #   Initialize.
     # Input:
-    #   SQL reference
-    #   Nutrients widget
+    #   SQL reference??
+    #   Nutrients widget?? or complete builder??
 
         # TODO Temporary
         self.builder = builder
@@ -413,43 +617,6 @@ class nutWindowHandlers:
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class testTab:
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Purpose:
-#   Test if Nutrient Tabs Generator can work
-#
-    def __init__(self, builder):
-
-        table = builder.get_object("testTable")
-
-        # First Set Size!
-        table.resize(len(layout[0]), len(layout))
-
-        # Add dummy labels to every unit
-        for i in xrange(len(layout)):
-            for j in xrange(len(layout[i])):
-                l = layout[i][j]
-
-                label1 = gtk.Label()
-                label2 = gtk.Label()
-
-                top = i
-                bottom = i+1
-
-                if l == None:
-                    pass
-                elif l < 0:
-                    label1.set_text("***Special***")
-                else:
-                    label1.set_text(sqlGetNutrName(l))
-
-                left = j*2
-                right = j*2+1
-                table.attach(label1, left, right, top, bottom)
-                table.attach(label2, left+1, right+1, top, bottom)
-
-
-#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def nutMain():
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Purpose:
@@ -457,6 +624,7 @@ def nutMain():
 #   bla
 #   bla
 #
+
     builder = gtk.Builder()
     builder.add_from_file("nut_try.glade")
 
@@ -464,9 +632,10 @@ def nutMain():
 
 
 
+    #xxx = viewfoodTab(builder.get_object("viewfood_tab"))
     xxx = viewfoodTab(builder)
 
-#    yyy = testTab(builder)
+    yyy = nutritionTabs(builder.get_object("tableX"), layout2, None)
 
     # Show off
     window = builder.get_object("windowNutMain")
