@@ -381,145 +381,15 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkNotebook" id="notebook4">
+                  <object class="GtkTable" id="vf_placeholder_nutrients">
                     <property name="visible">True</property>
-                    <property name="can_focus">True</property>
+                    <property name="can_focus">False</property>
                     <child>
-                      <object class="GtkLabel" id="label23">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">label because not filled yet.
-</property>
-                      </object>
-                    </child>
-                    <child type="tab">
-                      <object class="GtkLabel" id="label17">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Daily %</property>
-                      </object>
-                      <packing>
-                        <property name="tab_fill">False</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkTable" id="vf_notebook_table_nutrients">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <child>
-                          <placeholder/>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="position">1</property>
-                      </packing>
-                    </child>
-                    <child type="tab">
-                      <object class="GtkLabel" id="label18">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Nutrients</property>
-                      </object>
-                      <packing>
-                        <property name="position">1</property>
-                        <property name="tab_fill">False</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkTable" id="vf_notebook_table_carbsamino">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <child>
-                          <placeholder/>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="position">2</property>
-                      </packing>
-                    </child>
-                    <child type="tab">
-                      <object class="GtkLabel" id="label19">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Carbs &amp; Amino Acids</property>
-                      </object>
-                      <packing>
-                        <property name="position">2</property>
-                        <property name="tab_fill">False</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkTable" id="vf_notebook_table_miscellaneous">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <child>
-                          <placeholder/>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="position">3</property>
-                      </packing>
-                    </child>
-                    <child type="tab">
-                      <object class="GtkLabel" id="label20">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Miscellaneous</property>
-                      </object>
-                      <packing>
-                        <property name="position">3</property>
-                        <property name="tab_fill">False</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkTable" id="vf_notebook_table_fat1">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <child>
-                          <placeholder/>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="position">4</property>
-                      </packing>
-                    </child>
-                    <child type="tab">
-                      <object class="GtkLabel" id="label21">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Sat &amp; Mono FA</property>
-                      </object>
-                      <packing>
-                        <property name="position">4</property>
-                        <property name="tab_fill">False</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkTable" id="vf_notebook_table_fat2">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <child>
-                          <placeholder/>
-                        </child>
-                      </object>
-                      <packing>
-                        <property name="position">5</property>
-                      </packing>
-                    </child>
-                    <child type="tab">
-                      <object class="GtkLabel" id="label22">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Poly &amp; Trans FA</property>
-                      </object>
-                      <packing>
-                        <property name="position">5</property>
-                        <property name="tab_fill">False</property>
-                      </packing>
+                      <placeholder/>
                     </child>
                   </object>
                   <packing>
-                    <property name="expand">False</property>
+                    <property name="expand">True</property>
                     <property name="fill">True</property>
                     <property name="position">2</property>
                   </packing>

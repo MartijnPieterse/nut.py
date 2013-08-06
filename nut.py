@@ -15,10 +15,13 @@ except:
    sys.exit(1)
 
 
+import gobject
+
+
 
 
 con = None
-con = sqlite3.connect("/home/pieterse/Compile/nut_tcltk/nut.sqlite")
+con = sqlite3.connect("nut.sqlite")
 cur = con.cursor()
 
 sql = "SELECT Tagname,Units FROM nutr_def"
@@ -73,8 +76,23 @@ def sqlGetWeightFor(id):
 def sqlGetFoodNutrientValue(food_id, field_ids):
     sql = "SELECT "
 
-    for field in fields:
-        sql += "X"
+    for field in field_ids:
+        sql += sqlGetNutrTagName(field) + ","
+
+    sql = sql.rstrip(",") + " FROM food_des WHERE NDB_No=%s" % (food_id)
+
+    cur.execute(sql)
+    data = cur.fetchone()
+
+    # Should be only one!
+
+    result = {}
+
+    for n in zip(field_ids,data):
+        result[n[0]] = n[1]
+
+    return result
+
 
 # Layout should move into the database, probably.
 # For now:
@@ -298,7 +316,7 @@ class nutritionTabs:
         self.user = user
         self.parent = parent
         self.layout = layout
-        self.crossref = {}
+        self.crossref = [] 
     
         self.notebook_widget = gtk.Notebook()
 
@@ -340,7 +358,7 @@ class nutritionTabs:
 
                         # Store for later referense.
                         # TODO Some fieldids could be used more than once!
-                        self.crossref[tabname+repr(nutrient_id)] = label_value
+                        self.crossref.append([nutrient_id, label_value])
 
                     left = column*3
                     right = column*3+1
@@ -359,8 +377,23 @@ class nutritionTabs:
     #   Retrieve food information from database.
     #   Multiply all ingredients with multiplier and update all fields.
     #   If user is set, use information from there.
-        pass
+    
+        field_ids = []
 
+        for fields in self.crossref:
+            field_ids.append(fields[0])
+
+        v = sqlGetFoodNutrientValue(food_id, field_ids)
+
+        for fields in self.crossref:
+            label = fields[1]
+            value = v[fields[0]]
+
+            if value == None:
+                label.set_text("n/a")
+            else:
+                s = "%.3f" % (value*multiplier)
+                label.set_text(s.rstrip("0").rstrip("."))
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -401,7 +434,7 @@ class viewfoodTab:
 
         # Setup the search results
 
-        self.ls_search_results = gtk.ListStore(int, str)
+        self.ls_search_results = gtk.ListStore(gobject.TYPE_INT, gobject.TYPE_STRING)
 
         t = builder.get_object("treeview_vft_searchresult")
         t.set_model(self.ls_search_results)
@@ -415,7 +448,7 @@ class viewfoodTab:
 
         self.sel_search_results = t.get_selection()
 
-        self.createNutritionTabs()
+        self.nut_tab = nutritionTabs(builder.get_object("vf_placeholder_nutrients"), layout2, None )
         ### Make all connections
     
         # Connect search entry
@@ -425,45 +458,6 @@ class viewfoodTab:
         self.sel_search_results.connect("changed", self.onFoodChanged)
 
         
-
-    def createNutritionTabs(self):
-
-        self.crossref = { }
-        for k in layout.keys():
-            table = self.builder.get_object("vf_notebook_table_"+k)
-            # First Set Size!
-            table.resize(len(layout[k][0])*3, len(layout[k]))
-
-            # Add dummy labels to every unit
-            for i in xrange(len(layout[k])):
-                for j in xrange(len(layout[k][i])):
-                    l = layout[k][i][j]
-
-                    label1 = gtk.Label()
-                    label2 = gtk.Label()
-                    label3 = gtk.Label()
-
-                    top = i
-                    bottom = i+1
-
-                    if l == None:
-                        pass
-                    elif l < 0:
-                        label1.set_text("***Special***")
-                    else:
-                        label1.set_text(sqlGetNutrName(l))
-                        label2.set_alignment(1.0, 0.5)
-                        label3.set_text(" "+sqlGetNutrUnit(l))
-                        label3.set_alignment(0.0, 0.5)
-
-                        self.crossref[k+repr(l)] = label2
-
-                    left = j*3
-                    right = j*3+1
-                    table.attach(label1, left, right, top, bottom)
-                    table.attach(label2, left+1, right+1, top, bottom)
-                    table.attach(label3, left+2, right+2, top, bottom)
-
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     def entry_vft_search_changed_cb(self, entry):
@@ -476,16 +470,25 @@ class viewfoodTab:
 
         e = entry.get_text()
 
-        
         if len(e) >= 3:
             sql = "SELECT NDB_No,Long_Desc FROM food_des WHERE Long_Desc LIKE \"%" + entry.get_text() + "%\""
             cur.execute(sql)
 
+# TODO Vaagheid. Als food-id 14460 erin zit, dan gaat het kapot.
+# Zoeken op gat. Iets met
+# sqlite3.OperationalError: Could not decode to UTF-8 column 'Long_Desc' with text 'Sports drink, PEPSICO QUAKER GATORADE, GATORADE, original, fruit-flavored, ready-to-drink. Now called “G performance O 2”.'
+# 
+
             while True:
                 data = cur.fetchone()
+                #print data
 
                 if data == None: break
-                self.ls_search_results.append([data[0], data[1]])
+
+                #print "type", type(data[0]), " - ", type(data[1])
+                i = self.ls_search_results.append()
+                self.ls_search_results.set_value(i, 0, data[0])
+                self.ls_search_results.set_value(i, 1, data[1])
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     def onFoodChanged(self, food_id):
@@ -516,47 +519,7 @@ class viewfoodTab:
             # Set multiplier
             multiplier = float(w[0][2])
 
-            self.updateAllNutrients(value0, multiplier)
-
-
-        self.builder.get_object("windowNutMain").queue_draw()
-
-    def updateAllNutrients(self, nut_id, multiplier):
-        for k in layout.keys():
-            # Create SQL
-            sql = "SELECT "
-
-            for i in layout[k]:
-                for j in i:
-                    if j != None and j >= 0: sql += sqlGetNutrTagName(j) + ",";
-
-            sql = sql.rstrip(",") + " FROM food_des WHERE NDB_No=%s" % (nut_id)
-
-            #print sql
-
-            cur.execute(sql)
-            
-            data = cur.fetchone()
-
-            data_index = 0
-            for i in layout[k]:
-                for j in i:
-                    if j != None and j>=0:
-                        self.crossref[k+repr(j)].set_text("")
-                        if data[data_index] != None:
-
-                            t = float(data[data_index]) * multiplier
-
-                            t = ("%.3f" % (t)).rstrip("0").rstrip(".")
-
-                            self.crossref[k+repr(j)].set_text(t)
-                            #print j, t, len(t)
-                        else:
-                            self.crossref[k+repr(j)].set_text("(nd)")
-                        data_index += 1
-            # TODO Some sort of redraw??
-            #??self.builder.get_object("table1").queue_draw()
-
+            self.nut_tab.sql_update(value0, multiplier)
 
 
     def combobox_changed_cb(self, e):
@@ -579,7 +542,7 @@ class viewfoodTab:
                     tree_iter = model.get_iter(path)
                     value0 = model.get_value(tree_iter,0)
 
-                self.updateAllNutrients(value0, multiplier)
+                self.nut_tab.sql_update(value0, multiplier)
 
 
     def onSpinB_cb(self, e):
@@ -603,7 +566,7 @@ class viewfoodTab:
                     tree_iter = model.get_iter(path)
                     value0 = model.get_value(tree_iter,0)
 
-                self.updateAllNutrients(value0, multiplier*spv)
+                self.nut_tab.sql_update(value0, multiplier*spv)
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
