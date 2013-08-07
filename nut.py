@@ -1,4 +1,5 @@
 #!/bin/env python
+# -*- coding: iso-8859-15 -*-
 #
 
 import sqlite3
@@ -16,6 +17,7 @@ except:
 
 
 import gobject
+import datetime
 
 
 
@@ -93,6 +95,15 @@ def sqlGetFoodNutrientValue(food_id, field_ids):
 
     return result
 
+def sqlInsertMeal(date, meal, food_id, amount):
+    sql = "INSERT INTO mealfoods (meal_date, meal, NDB_No, mhectograms) VALUES ("
+    sql += repr(date) + ","
+    sql += repr(meal) + ","
+    sql += repr(food_id) + ","
+    sql += repr(amount) + ")"
+
+    cur.execute(sql)
+    con.commit()
 
 # Layout should move into the database, probably.
 # For now:
@@ -390,10 +401,62 @@ class nutritionTabs:
             value = v[fields[0]]
 
             if value == None:
-                label.set_text("n/a")
+                label.set_text("(no data)")
             else:
                 s = "%.3f" % (value*multiplier)
                 label.set_text(s.rstrip("0").rstrip("."))
+                #s = "0"
+                #label.set_text(s)
+
+    def redraw(self):                                
+        self.notebook_widget.queue_draw()
+
+
+
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class mealDateHandler:
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Purpose:
+#   Connects to a eventbox/label.
+#   Shows the current date, or the date selected.
+#
+#
+
+    def __init__(self, builder, parent):
+
+        eventbox = gtk.EventBox()
+
+        self.date_label = gtk.Label()
+
+        self.selected_date = datetime.datetime.today()
+
+        self.date_label.set_text(self.selected_date.strftime("%e %b %Y"))
+
+        
+        eventbox.connect("button-press-event", self.showCalendar)
+        eventbox.add(self.date_label)
+        parent.attach(eventbox, 0, 1, 0, 1)
+
+        self.calendarWindow = builder.get_object("windowCalendar")
+        self.calendar_widget = builder.get_object("calendar1")
+        self.calendar_widget.connect("day-selected", self.selectDate)
+
+        self.calendar_widget.select_month(self.selected_date.month-1, self.selected_date.year)
+        self.calendar_widget.select_day(self.selected_date.day)
+        
+
+    def showCalendar(self, p1, p2):
+        self.calendarWindow.show()
+
+    def selectDate(self, p1):
+        t = self.calendar_widget.get_date()
+
+        self.selected_date = datetime.datetime(t[0], t[1]+1, t[2])
+        self.date_label.set_text(self.selected_date.strftime("%e %b %Y"))
+
+        self.calendarWindow.hide()
+
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -413,7 +476,11 @@ class viewfoodTab:
     #   SQL reference??
     #   Nutrients widget?? or complete builder??
 
-        # TODO Temporary
+        # Belangrijke zaken
+        self.food_id = -1
+        self.hgrams = 0.0
+
+        # TODO Temporary?
         self.builder = builder
 
         ### Setup widgets that cannot be done in Glade for some reason.
@@ -457,7 +524,30 @@ class viewfoodTab:
         # Connect search results to update nutrients when chosen
         self.sel_search_results.connect("changed", self.onFoodChanged)
 
+        # Connect add2meal button
+        self.builder.get_object("vf_button_add2meal").connect("clicked", self.onAdd2Meal)
         
+
+        self.builder.get_object("adjustment1").set_all(0.0, 0.0, 0.0, 1.0, 10.0, 0.0)
+
+    def onAdd2Meal(self, button):
+        if self.food_id == -1:
+            message = gtk.MessageDialog(type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK)
+            message.set_markup("No food item selected.")
+            message.run()
+            message.destroy()
+            return
+
+        if self.hgrams <= 0.0:
+            message = gtk.MessageDialog(type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK)
+            message.set_markup("Incorrect amount given.")
+            message.run()
+            message.destroy()
+            return
+
+        # TODO De datum dus... lekker halve dingen doen...
+        sqlInsertMeal(0, 1, self.food_id, self.hgrams);    
+
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     def entry_vft_search_changed_cb(self, entry):
@@ -504,25 +594,30 @@ class viewfoodTab:
         assert len(pathlist) <= 1
         for path in pathlist :
             tree_iter = model.get_iter(path)
-            value0 = model.get_value(tree_iter,0)
+            self.food_id = model.get_value(tree_iter,0)
             value1 = model.get_value(tree_iter,1)
             
             # Update combobox
 
             self.ls_combobox.clear()
-            w = sqlGetWeightFor(value0)
+            w = sqlGetWeightFor(self.food_id)
             for i in w:
                 self.ls_combobox.append([i[0], i[1], i[2]])
             self.combobox.set_active(0)
             self.builder.get_object("vf_spinb_amount").set_value(float(w[0][1]))
 
             # Set multiplier
-            multiplier = float(w[0][2])
+            self.hgrams = float(w[0][2])
 
-            self.nut_tab.sql_update(value0, multiplier)
+            self.nut_tab.sql_update(self.food_id, self.hgrams)
 
+        # TODO, adjustment should vary with chosen unit.
+        self.builder.get_object("adjustment1").set_all(1.0, 0.0, 1000.0, 1.0, 10.0, 0.0)
 
     def combobox_changed_cb(self, e):
+
+        assert self.food_id != -1
+
         a = self.combobox.get_active()
 
         if a != -1:
@@ -532,20 +627,15 @@ class viewfoodTab:
 
             self.builder.get_object("vf_spinb_amount").set_value(self.ls_combobox.get_value(i, 1))
 
-            if i != None:
-                multiplier = self.ls_combobox.get_value(i, 2)
+            assert i != None
 
-                (model, pathlist) = self.sel_search_results.get_selected_rows()
-                
-                assert len(pathlist) <= 1
-                for path in pathlist :
-                    tree_iter = model.get_iter(path)
-                    value0 = model.get_value(tree_iter,0)
-
-                self.nut_tab.sql_update(value0, multiplier)
+            self.hgrams = self.ls_combobox.get_value(i, 2)
+            self.nut_tab.sql_update(self.food_id, self.hgrams)
 
 
     def onSpinB_cb(self, e):
+        assert self.food_id != -1
+
         spv = float( self.builder.get_object("vf_spinb_amount").get_value() )
         a = self.combobox.get_active()
 
@@ -554,20 +644,70 @@ class viewfoodTab:
 
             for dummy in xrange(a): i = self.ls_combobox.iter_next(i)
 
-            if i != None:
-                multiplier = self.ls_combobox.get_value(i, 2)
+            assert i!= None
 
-                spv = spv / float(self.ls_combobox.get_value(i, 1))
+            value = self.ls_combobox.get_value(i, 2)
+            spv = spv / float(self.ls_combobox.get_value(i, 1))
 
-                (model, pathlist) = self.sel_search_results.get_selected_rows()
-                
-                assert len(pathlist) <= 1
-                for path in pathlist :
-                    tree_iter = model.get_iter(path)
-                    value0 = model.get_value(tree_iter,0)
+            self.hgrams = value * spv
+            self.nut_tab.sql_update(self.food_id, self.hgrams)
 
-                self.nut_tab.sql_update(value0, multiplier*spv)
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class viewMealsTab:
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Purpose:
+#   Show the meals, their ingredients and their total nutrients.
+#   Not only per meal, but also all for a given day. (=total)
+#   Or select from date to date. Then average.
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    def __init__(self, builder):
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # Purpose
+    #   etc.
+    #   Default: Today, All meals.
+    #   Nutrients should be colored?
+    #       Red = More than daily allowence (taken from User settings)
+    #       Red = More than max. (also taken from user settings, but
+    #             most values are presets.?)
+    #       Red = Also below RDI.
+    #       Green = Within certain range of daily allowance?
+    #               ?? Maybe not?
+    #       Orange = Nearing red.
+    #       Also make tabs with Red items Red
+    #   
+    #   Foods can be changed:
+    #       Removed.
+    #       Amount changed??
+
+        self.ls_mealfoods = gtk.ListStore(gobject.TYPE_INT, gobject.TYPE_FLOAT, gobject.TYPE_STRING)
+
+        t = builder.get_object("treeview_vm_foods")
+        t.set_model(self.ls_mealfoods)
+
+        column = gtk.TreeViewColumn("Food Item:")
+        t.append_column(column)
+
+        cell = gtk.CellRendererText()
+        column.pack_start(cell, True)
+        column.add_attribute(cell, "text", 2)
+
+        column = gtk.TreeViewColumn("Weight:")
+        t.append_column(column)
+
+        cell = gtk.CellRendererText()
+        column.pack_start(cell, False)
+        column.add_attribute(cell, "text", 1)
+
+        # self.ls_mealfoods dus nog niet vullen.
+        # Pas bij de activate.
+        # Ofzoiets.
+        self.ls_mealfoods.append([1, 0.5, "Test"])
+
+
+    def onView(self, p1, p2, p3):
+        print "Nu is dus de mealding actief"
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class nutWindowHandlers:
@@ -578,6 +718,37 @@ class nutWindowHandlers:
     def windowNutMain_delete_event_cb(self, *args):
         gtk.main_quit(args)
 
+def doubleclick(p1):
+
+    print p1
+
+    cw = builder.get_object("calendar1")
+    print cw.get_date()
+
+    window = builder.get_object("windowCalendar")
+    window.hide()
+
+def showDataTime(p1, p2):
+
+    print p1
+    print p2
+
+    print "xxx"
+    window = builder.get_object("windowCalendar")
+
+    cw = builder.get_object("calendar1")
+    cw.connect("day-selected-double-click", doubleclick)
+
+    
+
+    window.show()
+
+
+    # Wait??
+
+
+
+builder = gtk.Builder()
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def nutMain():
@@ -588,7 +759,6 @@ def nutMain():
 #   bla
 #
 
-    builder = gtk.Builder()
     builder.add_from_file("nut_try.glade")
 
     builder.connect_signals(nutWindowHandlers())
@@ -598,7 +768,15 @@ def nutMain():
     #xxx = viewfoodTab(builder.get_object("viewfood_tab"))
     xxx = viewfoodTab(builder)
 
-    yyy = nutritionTabs(builder.get_object("tableX"), layout2, None)
+    # TODO move to viewfoodTab
+    #yyy = nutritionTabs(builder.get_object("tableX"), layout2, None)
+
+    zzz = mealDateHandler(builder, builder.get_object("table_dateselect"))
+
+    www = viewMealsTab(builder)
+
+
+    builder.get_object("notebook3").connect("switch-page", www.onView)
 
     # Show off
     window = builder.get_object("windowNutMain")

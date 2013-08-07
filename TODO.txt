@@ -1,4 +1,31 @@
-o Add LICENSE
-o Give widgets sensible names
-  Should the UI be auto-generated? Depending on fields in database?
-o
+Priority HIGH
+-------------
+
+o Add chosen food to meal
+o Add chosen food to recipe (Tab)
+
+o Add "theusual" in view foods.
+o Add recipes in view foods.
+
+o Fix recipe tab. Be able to search for complementary foods.
+  (i think this is what the recipe is about).
+o 
+
+Priority MEDIUM
+---------------
+
+o Create conversion from NEVO / USDA database
+o Select Database from menu (NEVO / USDA / Both)
+o Select preferred serving size choice
+
+Priority LOW
+------------
+
+o Add LICENSE.TXT
+o Fix Labels. When switching from (nd) to a value the alignment is sometimes wrong.
+o Add User settings:
+    Max amounts of everything
+    DRA, etc.
+o Add GFX, make a graph of days, where you can select
+  all nutrients, and weight.
+
