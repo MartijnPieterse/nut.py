@@ -415,12 +415,11 @@ class nutritionTabs:
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class mealDateHandler:
+class dateHandler:
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Purpose:
 #   Connects to a eventbox/label.
 #   Shows the current date, or the date selected.
-#
 #
 
     def __init__(self, builder, parent):
@@ -438,16 +437,26 @@ class mealDateHandler:
         eventbox.add(self.date_label)
         parent.attach(eventbox, 0, 1, 0, 1)
 
-        self.calendarWindow = builder.get_object("windowCalendar")
-        self.calendar_widget = builder.get_object("calendar1")
-        self.calendar_widget.connect("day-selected", self.selectDate)
+        self.calendarWindow = gtk.Window()
+        self.calendarWindow.set_resizable(False)
+        self.calendarWindow.set_modal(True)
+        self.calendarWindow.set_position(gtk.WIN_POS_MOUSE)
+        self.calendarWindow.set_decorated(False)
+
+        self.calendar_widget = gtk.Calendar()
+        self.calendar_widget.connect("day-selected-double-click", self.selectDate)
 
         self.calendar_widget.select_month(self.selected_date.month-1, self.selected_date.year)
         self.calendar_widget.select_day(self.selected_date.day)
-        
 
+
+        self.calendarWindow.add(self.calendar_widget)
+
+        self.date_set_cb = None
+
+        
     def showCalendar(self, p1, p2):
-        self.calendarWindow.show()
+        self.calendarWindow.show_all()
 
     def selectDate(self, p1):
         t = self.calendar_widget.get_date()
@@ -457,6 +466,13 @@ class mealDateHandler:
 
         self.calendarWindow.hide()
 
+        if self.date_set_cb: self.date_set_cb()
+
+    def get_date(self):
+        return self.selected_date
+
+    def set_date_change_cb(self, f):
+        self.date_set_cb = f
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -529,6 +545,8 @@ class viewfoodTab:
         
 
         self.builder.get_object("adjustment1").set_all(0.0, 0.0, 0.0, 1.0, 10.0, 0.0)
+
+        self.date = dateHandler(builder, builder.get_object("table_dateselect"))
 
     def onAdd2Meal(self, button):
         if self.food_id == -1:
@@ -705,6 +723,7 @@ class viewMealsTab:
         # Ofzoiets.
         self.ls_mealfoods.append([1, 0.5, "Test"])
 
+        self.date = dateHandler(builder, builder.get_object("table_dateselect_vm"))
 
     def onView(self, p1, p2, p3):
         print "Nu is dus de mealding actief"
@@ -771,7 +790,7 @@ def nutMain():
     # TODO move to viewfoodTab
     #yyy = nutritionTabs(builder.get_object("tableX"), layout2, None)
 
-    zzz = mealDateHandler(builder, builder.get_object("table_dateselect"))
+    #zzz = mealDateHandler(builder, builder.get_object("table_dateselect"))
 
     www = viewMealsTab(builder)
 
