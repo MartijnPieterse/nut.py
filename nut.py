@@ -22,6 +22,9 @@ import datetime
 
 
 
+# TODO Make "data" class. Which is to be used to retrieve all data.
+#      Data can then reside in database or text file, or whatever.
+
 con = None
 con = sqlite3.connect("nut.sqlite")
 cur = con.cursor()
@@ -104,6 +107,22 @@ def sqlInsertMeal(date, meal, food_id, amount):
 
     cur.execute(sql)
     con.commit()
+
+def sqlGetMealFoods(date):
+    sql  = "SELECT food_des.Long_Desc,mealfoods.mhectograms*100 FROM food_des,mealfoods "
+    sql += "WHERE mealfoods.meal_date=%d AND mealfoods.NDB_No=food_des.NDB_No" % (date)
+
+    cur.execute(sql)
+
+    result = [] 
+
+    data = cur.fetchone()
+    while data != None:
+        result.append([data[0], data[1]])
+        data = cur.fetchone()
+
+
+    return result
 
 # Layout should move into the database, probably.
 # For now:
@@ -469,7 +488,7 @@ class dateHandler:
         if self.date_set_cb: self.date_set_cb()
 
     def get_date(self):
-        return self.selected_date
+        return self.selected_date.year * 10000 + self.selected_date.month * 100 + self.selected_date.day
 
     def set_date_change_cb(self, f):
         self.date_set_cb = f
@@ -564,7 +583,8 @@ class viewfoodTab:
             return
 
         # TODO De datum dus... lekker halve dingen doen...
-        sqlInsertMeal(0, 1, self.food_id, self.hgrams);    
+        #
+        sqlInsertMeal(self.date.get_date(), 1, self.food_id, self.hgrams);    
 
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -711,7 +731,7 @@ class viewMealsTab:
         column.pack_start(cell, True)
         column.add_attribute(cell, "text", 2)
 
-        column = gtk.TreeViewColumn("Weight:")
+        column = gtk.TreeViewColumn("Weight (g):")
         t.append_column(column)
 
         cell = gtk.CellRendererText()
@@ -721,12 +741,19 @@ class viewMealsTab:
         # self.ls_mealfoods dus nog niet vullen.
         # Pas bij de activate.
         # Ofzoiets.
-        self.ls_mealfoods.append([1, 0.5, "Test"])
+        self.ls_mealfoods.append([1, 0.5, "Test met een hele lange string of moet dit ergens anders gedaan worden?"])
 
         self.date = dateHandler(builder, builder.get_object("table_dateselect_vm"))
 
+        # Get all data for current date. And put.
+        mfs = sqlGetMealFoods(20130810)
+
+        for mf in mfs:
+            self.ls_mealfoods.append([1, mf[1], mf[0]])
+ 
+
     def onView(self, p1, p2, p3):
-        print "Nu is dus de mealding actief"
+        pass
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class nutWindowHandlers:

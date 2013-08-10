@@ -2,21 +2,28 @@ Priority HIGH
 -------------
 
 o Add chosen food to meal
-o Add chosen food to recipe (Tab)
+  Partly done, cannot select meal yet.
+o Show meals
+o Show nutrients for meals
+o Show nutrients for numerous days
+o Show dates with meals as bold in date chooser
 
-o Add "theusual" in view foods.
-o Add recipes in view foods.
-
-o Fix recipe tab. Be able to search for complementary foods.
-  (i think this is what the recipe is about).
-o 
 
 Priority MEDIUM
 ---------------
 
+o Add chosen food to recipe (Tab)
+  From view meals. Select a few, create recipe.
+o Fix recipe tab. Be able to search for complementary foods.
+  (i think this is what the recipe is about).
+o Add recipes in view foods.
+o Add "theusual" in view foods.
+  theusual is the same as recipes...
 o Create conversion from NEVO / USDA database
 o Select Database from menu (NEVO / USDA / Both)
 o Select preferred serving size choice
+o Data chooser is not very friendly...
+  click in main must disable date chooser
 
 Priority LOW
 ------------
@@ -28,4 +35,4 @@ o Add User settings:
     DRA, etc.
 o Add GFX, make a graph of days, where you can select
   all nutrients, and weight.
-
+o Add keyboard controls.
