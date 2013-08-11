@@ -6,7 +6,10 @@ o Add chosen food to meal
 o Show meals
 o Show nutrients for meals
 o Show nutrients for numerous days
+  Standaard 1 dag. Checkbox voor meerdere dagen, dan ook gui aanpassen..
+  Met start/eind
 o Show dates with meals as bold in date chooser
+  Kan, maar wel opletten met "maand change..."
 
 
 Priority MEDIUM
@@ -24,6 +27,15 @@ o Select Database from menu (NEVO / USDA / Both)
 o Select preferred serving size choice
 o Data chooser is not very friendly...
   click in main must disable date chooser
+o Doe iets met afronden.... 5.019g is niet zo nuttig. 5.0. 
+  Maar 0.19 weer wel. En 1008.
+  Dus 3 digits max.
+  <1 --> 0.xxx
+  <10 --> x.xx
+  <100 --> xx.x
+  >100 --> xxxxxxxxx
+o Force to grams in View Foods.
+o Create AboutBox
 
 Priority LOW
 ------------

@@ -98,6 +98,36 @@ def sqlGetFoodNutrientValue(food_id, field_ids):
 
     return result
 
+def sqlGetFoodNutrientValues(food_ids, field_ids):
+    sql = "SELECT "
+
+    for field in field_ids:
+        sql += sqlGetNutrTagName(field) + ","
+
+    sql = sql.rstrip(",") + " FROM food_des WHERE NDB_No IN ("
+
+    for fi in food_ids:
+        sql += "%s," % (fi)
+
+    sql = sql.rstrip(",") + ")"
+
+    cur.execute(sql)
+    data = cur.fetchone()
+
+    # Should be only one!
+
+    results = {}
+
+    # TODO Check food_ids from sql output...
+    for fi in food_ids:
+        result = {}
+        for n in zip(field_ids,data):
+            result[n[0]] = n[1]
+
+        results[fi] = result
+
+    return results
+
 def sqlInsertMeal(date, meal, food_id, amount):
     sql = "INSERT INTO mealfoods (meal_date, meal, NDB_No, mhectograms) VALUES ("
     sql += repr(date) + ","
@@ -109,16 +139,16 @@ def sqlInsertMeal(date, meal, food_id, amount):
     con.commit()
 
 def sqlGetMealFoods(date):
-    sql  = "SELECT food_des.Long_Desc,mealfoods.mhectograms*100 FROM food_des,mealfoods "
+    sql  = "SELECT food_des.Long_Desc,mealfoods.mhectograms,mealfoods.NDB_No FROM food_des,mealfoods "
     sql += "WHERE mealfoods.meal_date=%d AND mealfoods.NDB_No=food_des.NDB_No" % (date)
 
     cur.execute(sql)
 
-    result = [] 
+    result = []
 
     data = cur.fetchone()
     while data != None:
-        result.append([data[0], data[1]])
+        result.append([data[0], data[1], data[2]])
         data = cur.fetchone()
 
 
@@ -346,8 +376,8 @@ class nutritionTabs:
         self.user = user
         self.parent = parent
         self.layout = layout
-        self.crossref = [] 
-    
+        self.crossref = []
+
         self.notebook_widget = gtk.Notebook()
 
         for tabdata in layout:
@@ -407,7 +437,7 @@ class nutritionTabs:
     #   Retrieve food information from database.
     #   Multiply all ingredients with multiplier and update all fields.
     #   If user is set, use information from there.
-    
+
         field_ids = []
 
         for fields in self.crossref:
@@ -427,7 +457,44 @@ class nutritionTabs:
                 #s = "0"
                 #label.set_text(s)
 
-    def redraw(self):                                
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    def sql_update_meal(self, mf, mw):
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # Purpose:
+    #   Retrieve food information from database.
+    #   Multiply all ingredients with multiplier and update all fields.
+    #   If user is set, use information from there.
+
+        field_ids = []
+
+        for fields in self.crossref:
+            field_ids.append(fields[0])
+
+        v = sqlGetFoodNutrientValues(mf, field_ids)
+
+        # TODO: Give some kind of score on the total value?
+        for fields in self.crossref:
+            label = fields[1]
+
+            total_value = None
+            for fid,weight in zip(mf,mw):
+                value = v[fid][fields[0]]
+                if value != None:
+                    value *= weight
+                    if total_value == None:
+                        total_value = value
+                    else:
+                        total_value += value
+
+            if total_value == None:
+                label.set_text("(no data)")
+            else:
+                s = "%.3f" % (total_value)
+                label.set_text(s.rstrip("0").rstrip("."))
+                #s = "0"
+                #label.set_text(s)
+
+    def redraw(self):
         self.notebook_widget.queue_draw()
 
 
@@ -451,7 +518,7 @@ class dateHandler:
 
         self.date_label.set_text(self.selected_date.strftime("%e %b %Y"))
 
-        
+
         eventbox.connect("button-press-event", self.showCalendar)
         eventbox.add(self.date_label)
         parent.attach(eventbox, 0, 1, 0, 1)
@@ -461,6 +528,7 @@ class dateHandler:
         self.calendarWindow.set_modal(True)
         self.calendarWindow.set_position(gtk.WIN_POS_MOUSE)
         self.calendarWindow.set_decorated(False)
+        self.calendarWindow.set_transient_for(builder.get_object("windowNutMain"))
 
         self.calendar_widget = gtk.Calendar()
         self.calendar_widget.connect("day-selected-double-click", self.selectDate)
@@ -473,7 +541,7 @@ class dateHandler:
 
         self.date_set_cb = None
 
-        
+
     def showCalendar(self, p1, p2):
         self.calendarWindow.show_all()
 
@@ -531,7 +599,7 @@ class viewfoodTab:
         self.combobox.set_active(0)
         self.combobox.connect("changed", self.combobox_changed_cb)
 
-        builder.get_object("vf_spinb_amount").connect("changed", self.onSpinB_cb)
+        builder.get_object("vf_spinb_amount").connect("output", self.onSpinB_cb)
 
 
         # Setup the search results
@@ -552,7 +620,7 @@ class viewfoodTab:
 
         self.nut_tab = nutritionTabs(builder.get_object("vf_placeholder_nutrients"), layout2, None )
         ### Make all connections
-    
+
         # Connect search entry
         builder.get_object("entry_vft_search").connect("changed", self.entry_vft_search_changed_cb)
 
@@ -561,7 +629,7 @@ class viewfoodTab:
 
         # Connect add2meal button
         self.builder.get_object("vf_button_add2meal").connect("clicked", self.onAdd2Meal)
-        
+
 
         self.builder.get_object("adjustment1").set_all(0.0, 0.0, 0.0, 1.0, 10.0, 0.0)
 
@@ -584,7 +652,7 @@ class viewfoodTab:
 
         # TODO De datum dus... lekker halve dingen doen...
         #
-        sqlInsertMeal(self.date.get_date(), 1, self.food_id, self.hgrams);    
+        sqlInsertMeal(self.date.get_date(), 1, self.food_id, self.hgrams);
 
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -592,7 +660,7 @@ class viewfoodTab:
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     # Purpose:
     #   If the entered text is >=3 query the database for the foods.
-        
+
         # Clear list
         self.ls_search_results.clear()
 
@@ -605,7 +673,7 @@ class viewfoodTab:
 # TODO Vaagheid. Als food-id 14460 erin zit, dan gaat het kapot.
 # Zoeken op gat. Iets met
 # sqlite3.OperationalError: Could not decode to UTF-8 column 'Long_Desc' with text 'Sports drink, PEPSICO QUAKER GATORADE, GATORADE, original, fruit-flavored, ready-to-drink. Now called “G performance O 2”.'
-# 
+#
 
             while True:
                 data = cur.fetchone()
@@ -628,13 +696,13 @@ class viewfoodTab:
     #   food_id -  - food must be available in the database.
     #
         (model, pathlist) = self.sel_search_results.get_selected_rows()
-        
+
         assert len(pathlist) <= 1
         for path in pathlist :
             tree_iter = model.get_iter(path)
             self.food_id = model.get_value(tree_iter,0)
             value1 = model.get_value(tree_iter,1)
-            
+
             # Update combobox
 
             self.ls_combobox.clear()
@@ -672,8 +740,12 @@ class viewfoodTab:
 
 
     def onSpinB_cb(self, e):
+
+        print "XXX",
+
         assert self.food_id != -1
 
+        # TODO get value is niet goed als je aan het editten bent...
         spv = float( self.builder.get_object("vf_spinb_amount").get_value() )
         a = self.combobox.get_active()
 
@@ -688,7 +760,10 @@ class viewfoodTab:
             spv = spv / float(self.ls_combobox.get_value(i, 1))
 
             self.hgrams = value * spv
+            print self.hgrams,
             self.nut_tab.sql_update(self.food_id, self.hgrams)
+
+        print
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -714,15 +789,17 @@ class viewMealsTab:
     #               ?? Maybe not?
     #       Orange = Nearing red.
     #       Also make tabs with Red items Red
-    #   
+    #
     #   Foods can be changed:
     #       Removed.
     #       Amount changed??
 
-        self.ls_mealfoods = gtk.ListStore(gobject.TYPE_INT, gobject.TYPE_FLOAT, gobject.TYPE_STRING)
+        self.ls_mealfoods = gtk.ListStore(gobject.TYPE_INT, gobject.TYPE_STRING, gobject.TYPE_STRING)
 
         t = builder.get_object("treeview_vm_foods")
         t.set_model(self.ls_mealfoods)
+
+        t.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
 
         column = gtk.TreeViewColumn("Food Item:")
         t.append_column(column)
@@ -741,19 +818,31 @@ class viewMealsTab:
         # self.ls_mealfoods dus nog niet vullen.
         # Pas bij de activate.
         # Ofzoiets.
-        self.ls_mealfoods.append([1, 0.5, "Test met een hele lange string of moet dit ergens anders gedaan worden?"])
-
         self.date = dateHandler(builder, builder.get_object("table_dateselect_vm"))
 
-        # Get all data for current date. And put.
-        mfs = sqlGetMealFoods(20130810)
+        self.nut_tab = nutritionTabs(builder.get_object("vm_nutrients_placeholder"), layout2, None )
 
+
+        self.date.set_date_change_cb(self.onView)
+
+
+    def onView(self):
+        # Move the filling of information to here.
+        # Otherwise startup will take too long?
+        mfs = sqlGetMealFoods(self.date.get_date())
+
+        self.ls_mealfoods.clear()
+
+        fid = []
+        fw = []
         for mf in mfs:
-            self.ls_mealfoods.append([1, mf[1], mf[0]])
- 
+            fid.append(mf[2])
+            fw.append(mf[1])
+            self.ls_mealfoods.append([1, "%.2f" % (100.0*float(mf[1])), mf[0] ])
 
-    def onView(self, p1, p2, p3):
-        pass
+
+        self.nut_tab.sql_update_meal(fid, fw)
+
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class nutWindowHandlers:
@@ -785,8 +874,6 @@ def showDataTime(p1, p2):
     cw = builder.get_object("calendar1")
     cw.connect("day-selected-double-click", doubleclick)
 
-    
-
     window.show()
 
 
@@ -795,6 +882,23 @@ def showDataTime(p1, p2):
 
 
 builder = gtk.Builder()
+
+
+class topNotebook:
+    def __init__(self, builder):
+
+        self.vf = viewfoodTab(builder)
+        self.vm = viewMealsTab(builder)
+
+
+        builder.get_object("notebook3").connect("switch-page", self.noteBookChange)
+
+
+    def noteBookChange(self, p1, p2, p3):
+
+        # TODO This should be done better...
+        if p3 == 1: self.vm.onView()
+        
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def nutMain():
@@ -810,19 +914,7 @@ def nutMain():
     builder.connect_signals(nutWindowHandlers())
 
 
-
-    #xxx = viewfoodTab(builder.get_object("viewfood_tab"))
-    xxx = viewfoodTab(builder)
-
-    # TODO move to viewfoodTab
-    #yyy = nutritionTabs(builder.get_object("tableX"), layout2, None)
-
-    #zzz = mealDateHandler(builder, builder.get_object("table_dateselect"))
-
-    www = viewMealsTab(builder)
-
-
-    builder.get_object("notebook3").connect("switch-page", www.onView)
+    zzz = topNotebook(builder)
 
     # Show off
     window = builder.get_object("windowNutMain")
