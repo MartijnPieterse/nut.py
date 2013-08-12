@@ -3,8 +3,6 @@ Priority HIGH
 
 o Add chosen food to meal
   Partly done, cannot select meal yet.
-o Show meals
-o Show nutrients for meals
 o Show nutrients for numerous days
   Standaard 1 dag. Checkbox voor meerdere dagen, dan ook gui aanpassen..
   Met start/eind

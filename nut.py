@@ -373,21 +373,22 @@ class nutritionTabs:
     #       Create nutrient fields (according to the given layout)
     #   Store the user for conversions.
 
-        self.user = user
+        assert type(parent) == gtk.Table
+
+        self.user = user            # TODO Unused.
         self.parent = parent
         self.layout = layout
         self.crossref = []
 
+        # Create notebook.
         self.notebook_widget = gtk.Notebook()
 
         for tabdata in layout:
-            tabname = tabdata[0]
-
-            # create label for tab
+            # Create label for tab
             tabnamelabel = gtk.Label()
-            tabnamelabel.set_text(tabname)
+            tabnamelabel.set_text(tabdata[0])
 
-            # create content for tab
+            # Create content for tab
             tabcontent = gtk.Table()
 
             # Set size. Need 3 columns for every field.
@@ -403,12 +404,12 @@ class nutritionTabs:
                     label_value       = gtk.Label()
                     label_units       = gtk.Label()
 
-                    top = row
-                    bottom = row+1
 
                     if nutrient_id == None:
+                        # Empty field.
                         pass
                     elif nutrient_id < 0:
+                        # TODO
                         label_description.set_text("***Special***")
                     else:
                         label_description.set_text(sqlGetNutrName(nutrient_id))
@@ -416,15 +417,18 @@ class nutritionTabs:
                         label_units.set_text(" "+sqlGetNutrUnit(nutrient_id))
                         label_units.set_alignment(0.0, 0.5)
 
-                        # Store for later referense.
-                        # TODO Some fieldids could be used more than once!
+                        # Store for later reference.
+                        # Note: nutrient_id could be present more than once.
                         self.crossref.append([nutrient_id, label_value])
 
-                    left = column*3
-                    right = column*3+1
-                    tabcontent.attach(label_description, left, right, top, bottom)
-                    tabcontent.attach(label_value, left+1, right+1, top, bottom)
-                    tabcontent.attach(label_units, left+2, right+2, top, bottom)
+                    top    = row
+                    bottom = row+1
+                    left   = column*3
+                    right  = column*3+1
+
+                    tabcontent.attach(label_description, left,   right,   top, bottom)
+                    tabcontent.attach(label_value,       left+1, right+1, top, bottom)
+                    tabcontent.attach(label_units,       left+2, right+2, top, bottom)
 
             self.notebook_widget.append_page(tabcontent, tabnamelabel)
 
@@ -441,7 +445,8 @@ class nutritionTabs:
         field_ids = []
 
         for fields in self.crossref:
-            field_ids.append(fields[0])
+            if fields[0] not in field_ids:
+                field_ids.append(fields[0])
 
         v = sqlGetFoodNutrientValue(food_id, field_ids)
 
@@ -468,11 +473,11 @@ class nutritionTabs:
         field_ids = []
 
         for fields in self.crossref:
-            field_ids.append(fields[0])
+            if fields[0] not in field_ids:
+                field_ids.append(fields[0])
 
         v = sqlGetFoodNutrientValues(mf, field_ids)
 
-        # TODO: Give some kind of score on the total value?
         for fields in self.crossref:
             label = fields[1]
 
@@ -509,6 +514,8 @@ class dateHandler:
 #
 
     def __init__(self, builder, parent):
+
+        assert type(parent) == gtk.Table
 
         eventbox = gtk.EventBox()
 
@@ -599,7 +606,8 @@ class viewfoodTab:
         self.combobox.set_active(0)
         self.combobox.connect("changed", self.combobox_changed_cb)
 
-        builder.get_object("vf_spinb_amount").connect("output", self.onSpinB_cb)
+        self.spinbutton = builder.get_object("vf_spinb_amount")
+        self.spinbutton.connect("output", self.onSpinB_cb)
 
 
         # Setup the search results
@@ -666,6 +674,8 @@ class viewfoodTab:
 
         e = entry.get_text()
 
+        enable = False
+
         if len(e) >= 3:
             sql = "SELECT NDB_No,Long_Desc FROM food_des WHERE Long_Desc LIKE \"%" + entry.get_text() + "%\""
             cur.execute(sql)
@@ -676,6 +686,7 @@ class viewfoodTab:
 #
 
             while True:
+                enable = True
                 data = cur.fetchone()
                 #print data
 
@@ -710,7 +721,7 @@ class viewfoodTab:
             for i in w:
                 self.ls_combobox.append([i[0], i[1], i[2]])
             self.combobox.set_active(0)
-            self.builder.get_object("vf_spinb_amount").set_value(float(w[0][1]))
+            self.spinbutton.set_value(float(w[0][1]))
 
             # Set multiplier
             self.hgrams = float(w[0][2])
@@ -731,7 +742,7 @@ class viewfoodTab:
 
             for dummy in xrange(a): i = self.ls_combobox.iter_next(i)
 
-            self.builder.get_object("vf_spinb_amount").set_value(self.ls_combobox.get_value(i, 1))
+            self.spinbutton.set_value(self.ls_combobox.get_value(i, 1))
 
             assert i != None
 
@@ -741,12 +752,12 @@ class viewfoodTab:
 
     def onSpinB_cb(self, e):
 
-        print "XXX",
-
-        assert self.food_id != -1
+        # Only do something in a food is selected.
+        if self.food_id == -1: return
 
         # TODO get value is niet goed als je aan het editten bent...
-        spv = float( self.builder.get_object("vf_spinb_amount").get_value() )
+        spv = float( self.spinbutton.get_value() )
+
         a = self.combobox.get_active()
 
         if a != -1:
@@ -760,10 +771,9 @@ class viewfoodTab:
             spv = spv / float(self.ls_combobox.get_value(i, 1))
 
             self.hgrams = value * spv
-            print self.hgrams,
             self.nut_tab.sql_update(self.food_id, self.hgrams)
 
-        print
+        return False
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -799,7 +809,8 @@ class viewMealsTab:
         t = builder.get_object("treeview_vm_foods")
         t.set_model(self.ls_mealfoods)
 
-        t.get_selection().set_mode(gtk.SELECTION_MULTIPLE)
+        self.sel_mealfoods = t.get_selection()
+        self.sel_mealfoods.set_mode(gtk.SELECTION_MULTIPLE)
 
         column = gtk.TreeViewColumn("Food Item:")
         t.append_column(column)
@@ -825,6 +836,30 @@ class viewMealsTab:
 
         self.date.set_date_change_cb(self.onView)
 
+        builder.get_object("vm_button_remove").connect("clicked", self.removeFoods)
+
+
+    def removeFoods(self, p1):
+        (model, pathlist) = self.sel_mealfoods.get_selected_rows()
+
+        if len(pathlist) == 0:
+            message = gtk.MessageDialog(type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK)
+            message.set_markup("No food item(s) selected.")
+            message.run()
+            message.destroy()
+            return
+
+        for path in pathlist:
+            tree_iter = model.get_iter(path)
+            print model.get_value(tree_iter,0),
+            print model.get_value(tree_iter,1),
+            print model.get_value(tree_iter,2)
+
+            self.ls_mealfoods.remove(tree_iter)
+
+        # 
+
+        self.onView()
 
     def onView(self):
         # Move the filling of information to here.
@@ -838,10 +873,11 @@ class viewMealsTab:
         for mf in mfs:
             fid.append(mf[2])
             fw.append(mf[1])
-            self.ls_mealfoods.append([1, "%.2f" % (100.0*float(mf[1])), mf[0] ])
+            self.ls_mealfoods.append([mf[2], "%.2f" % (100.0*float(mf[1])), mf[0] ])
 
 
         self.nut_tab.sql_update_meal(fid, fw)
+
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -850,8 +886,19 @@ class nutWindowHandlers:
 # Purpose:
 #   Catch all handlers defined via glade.
 #
+
+    def __init__(self):
+        self.aboutwindow = builder.get_object("aboutdialog1")
+        self.aboutwindow.connect("response", self.closeAbout)
+
     def windowNutMain_delete_event_cb(self, *args):
         gtk.main_quit(args)
+
+    def windowShowDialog(self, *arg):
+        self.aboutwindow.show_all()
+
+    def closeAbout(self, *args):
+        self.aboutwindow.hide()
 
 def doubleclick(p1):
 
