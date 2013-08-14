@@ -8,6 +8,8 @@ o Show nutrients for numerous days
   Met start/eind
 o Show dates with meals as bold in date chooser
   Kan, maar wel opletten met "maand change..."
+  Ook "vandaag" moet duidelijker.
+o Add more "assert" statements.
 
 
 Priority MEDIUM
@@ -23,7 +25,7 @@ o Add "theusual" in view foods.
 o Create conversion from NEVO / USDA database
 o Select Database from menu (NEVO / USDA / Both)
 o Select preferred serving size choice
-o Data chooser is not very friendly...
+o Date chooser is not very friendly...
   click in main must disable date chooser
 o Doe iets met afronden.... 5.019g is niet zo nuttig. 5.0. 
   Maar 0.19 weer wel. En 1008.
@@ -33,7 +35,8 @@ o Doe iets met afronden.... 5.019g is niet zo nuttig. 5.0.
   <100 --> xx.x
   >100 --> xxxxxxxxx
 o Force to grams in View Foods.
-o Create AboutBox
+o Update AboutBox
+o Sanitize user input
 
 Priority LOW
 ------------

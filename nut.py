@@ -128,7 +128,11 @@ def sqlGetFoodNutrientValues(food_ids, field_ids):
 
     return results
 
-def sqlInsertMeal(date, meal, food_id, amount):
+def sqlInsertMealFood(date, meal, food_id, amount):
+    # Error on dates before the year 1000, and after 9999
+    assert date > 10000000
+    assert date < 99999999
+
     sql = "INSERT INTO mealfoods (meal_date, meal, NDB_No, mhectograms) VALUES ("
     sql += repr(date) + ","
     sql += repr(meal) + ","
@@ -138,8 +142,23 @@ def sqlInsertMeal(date, meal, food_id, amount):
     cur.execute(sql)
     con.commit()
 
+def sqlDeleteMealFoods(mealfood_ids):
+    sql = "DELETE FROM mealfoods WHERE id IN ("
+    for i in mealfood_ids:
+        sql += "%d," % (i)
+
+    sql = sql.rstrip(",") + ")"
+
+    cur.execute(sql)
+    con.commit()
+
 def sqlGetMealFoods(date):
-    sql  = "SELECT food_des.Long_Desc,mealfoods.mhectograms,mealfoods.NDB_No FROM food_des,mealfoods "
+
+    # Error on dates before the year 1000, and after 9999
+    assert date > 10000000
+    assert date < 99999999
+
+    sql  = "SELECT mealfoods.id,food_des.Long_Desc,mealfoods.mhectograms,mealfoods.NDB_No FROM food_des,mealfoods "
     sql += "WHERE mealfoods.meal_date=%d AND mealfoods.NDB_No=food_des.NDB_No" % (date)
 
     cur.execute(sql)
@@ -148,11 +167,44 @@ def sqlGetMealFoods(date):
 
     data = cur.fetchone()
     while data != None:
-        result.append([data[0], data[1], data[2]])
+        result.append([data[0], data[1], data[2], data[3]])
         data = cur.fetchone()
 
 
     return result
+
+
+def sqlAddRecipe(name, foods):
+
+    assert len(foods) != 0
+
+    sql = "INSERT INTO recipes (name) VALUES (\""+name+"\")"
+    cur.execute(sql)
+    con.commit()
+
+    recipe_id = cur.lastrowid
+
+    sql = "INSERT INTO recipe_foods (recipe_id, food_id, hgrams) VALUES "
+
+    for f in foods:
+        assert len(f) == 2
+        assert type(f[0]) == int
+        assert type(f[1]) == float
+
+        values = "(%d, %d, %.3f)," % (recipe_id, f[0], f[1])
+        sql += values
+
+    sql = sql.rstrip(",")
+
+    cur.execute(sql)
+    con.commit()
+
+
+# Database creation / import.
+
+# 
+def datbaseCreate():
+    pass
 
 # Layout should move into the database, probably.
 # For now:
@@ -660,7 +712,7 @@ class viewfoodTab:
 
         # TODO De datum dus... lekker halve dingen doen...
         #
-        sqlInsertMeal(self.date.get_date(), 1, self.food_id, self.hgrams);
+        sqlInsertMealFood(self.date.get_date(), 1, self.food_id, self.hgrams);
 
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -804,7 +856,7 @@ class viewMealsTab:
     #       Removed.
     #       Amount changed??
 
-        self.ls_mealfoods = gtk.ListStore(gobject.TYPE_INT, gobject.TYPE_STRING, gobject.TYPE_STRING)
+        self.ls_mealfoods = gtk.ListStore(gobject.TYPE_INT, gobject.TYPE_INT, gobject.TYPE_STRING, gobject.TYPE_STRING)
 
         t = builder.get_object("treeview_vm_foods")
         t.set_model(self.ls_mealfoods)
@@ -817,14 +869,14 @@ class viewMealsTab:
 
         cell = gtk.CellRendererText()
         column.pack_start(cell, True)
-        column.add_attribute(cell, "text", 2)
+        column.add_attribute(cell, "text", 3)
 
         column = gtk.TreeViewColumn("Weight (g):")
         t.append_column(column)
 
         cell = gtk.CellRendererText()
         column.pack_start(cell, False)
-        column.add_attribute(cell, "text", 1)
+        column.add_attribute(cell, "text", 2)
 
         # self.ls_mealfoods dus nog niet vullen.
         # Pas bij de activate.
@@ -838,6 +890,8 @@ class viewMealsTab:
 
         builder.get_object("vm_button_remove").connect("clicked", self.removeFoods)
 
+        builder.get_object("vm_button_createrecipe").connect("clicked", self.createRecipe_cb)
+
 
     def removeFoods(self, p1):
         (model, pathlist) = self.sel_mealfoods.get_selected_rows()
@@ -849,17 +903,55 @@ class viewMealsTab:
             message.destroy()
             return
 
+        mealfoods_delete = []
         for path in pathlist:
             tree_iter = model.get_iter(path)
-            print model.get_value(tree_iter,0),
-            print model.get_value(tree_iter,1),
-            print model.get_value(tree_iter,2)
+            mealfoods_delete.append(model.get_value(tree_iter,0))
 
-            self.ls_mealfoods.remove(tree_iter)
+            #self.ls_mealfoods.remove(tree_iter)
 
-        # 
+        sqlDeleteMealFoods(mealfoods_delete)
 
         self.onView()
+
+    def createRecipe_cb(self, p1):
+        (model, pathlist) = self.sel_mealfoods.get_selected_rows()
+
+        if len(pathlist) == 0:
+            message = gtk.MessageDialog(type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK)
+            message.set_markup("No food item(s) selected.")
+            message.run()
+            message.destroy()
+            return
+
+        # Get selected foods.
+        recipe_foods = []
+        for path in pathlist:
+            tree_iter = model.get_iter(path)
+            food_id = model.get_value(tree_iter,1)
+            food_hg = float(model.get_value(tree_iter,2)) / 100.0       # back to hgrams
+            recipe_foods.append([food_id, food_hg])
+
+        dialogWindow = gtk.MessageDialog(type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_OK_CANCEL)
+        dialogWindow.set_markup("Enter recipe name:")
+
+        dialogWindow.set_title("Create Recipe")
+
+        dialogBox = dialogWindow.get_content_area()
+        userEntry = gtk.Entry()
+        userEntry.set_visibility(True)
+        dialogBox.pack_end(userEntry, False, False, 0)
+
+        dialogWindow.show_all()
+        response = dialogWindow.run()
+        text = userEntry.get_text() 
+        dialogWindow.destroy()
+
+        # Only add if respone was OK
+        if response == gtk.RESPONSE_OK:
+            if len(text) != 0:
+                sqlAddRecipe(text, recipe_foods)
+
 
     def onView(self):
         # Move the filling of information to here.
@@ -871,9 +963,9 @@ class viewMealsTab:
         fid = []
         fw = []
         for mf in mfs:
-            fid.append(mf[2])
-            fw.append(mf[1])
-            self.ls_mealfoods.append([mf[2], "%.2f" % (100.0*float(mf[1])), mf[0] ])
+            fid.append(mf[3])
+            fw.append(mf[2])
+            self.ls_mealfoods.append([mf[0], mf[3], "%.2f" % (100.0*float(mf[2])), mf[1] ])
 
 
         self.nut_tab.sql_update_meal(fid, fw)
@@ -956,7 +1048,7 @@ def nutMain():
 #   bla
 #
 
-    builder.add_from_file("nut_try.glade")
+    builder.add_from_file("nut.glade")
 
     builder.connect_signals(nutWindowHandlers())
 
