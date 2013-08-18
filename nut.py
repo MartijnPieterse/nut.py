@@ -711,15 +711,21 @@ class viewfoodTab:
 
         self.date = dateHandler(builder, builder.get_object("table_dateselect"))
 
+        self.fillAllFoodsDone = False
         self.fillAllFoods()
 
     def fillAllFoods(self):
-        # TODO
-        con = sqlite3.connect("nut.sqlite")
-        cur = con.cursor()
 
         t = builder.get_object("treeview_vft_searchresult")
         t.set_model(self.ts_search_results)
+
+
+        if self.fillAllFoodsDone: return
+
+        self.fillAllFoodsDone = True
+        # TODO
+        con = sqlite3.connect("nut.sqlite")
+        cur = con.cursor()
 
         sql = "SELECT NDB_No,Long_Desc,FdGrp_Cd FROM food_des ORDER BY FdGrp_Cd,Long_Desc"
         cur.execute(sql)
@@ -802,7 +808,9 @@ class viewfoodTab:
             t = self.builder.get_object("treeview_vft_searchresult")
             t.set_model(self.ls_search_results)
 
-            sql = "SELECT NDB_No,Long_Desc FROM food_des WHERE Long_Desc LIKE \"%" + entry.get_text() + "%\""
+            searchstring = entry.get_text().replace(" ", "%")
+
+            sql = "SELECT NDB_No,Long_Desc FROM food_des WHERE Long_Desc LIKE \"%" + searchstring + "%\""
             cur.execute(sql)
 
 # TODO Vaagheid. Als food-id 14460 erin zit, dan gaat het kapot.
@@ -836,6 +844,7 @@ class viewfoodTab:
     #
         (model, pathlist) = self.sel_search_results.get_selected_rows()
 
+        amount = 1.0
         assert len(pathlist) <= 1
         for path in pathlist :
             tree_iter = model.get_iter(path)
@@ -851,13 +860,15 @@ class viewfoodTab:
             self.combobox.set_active(0)
             self.spinbutton.set_value(float(w[0][1]))
 
+            amount = w[0][1]
+
             # Set multiplier
             self.hgrams = float(w[0][2])
 
             self.nut_tab.sql_update(self.food_id, self.hgrams)
 
         # TODO, adjustment should vary with chosen unit.
-        self.builder.get_object("adjustment1").set_all(1.0, 0.0, 1000.0, 1.0, 10.0, 0.0)
+        self.builder.get_object("adjustment1").set_all(amount, 0.0, 1000.0, 1.0, 10.0, 0.0)
 
     def combobox_changed_cb(self, e):
 

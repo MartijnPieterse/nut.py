@@ -89,3 +89,13 @@ CREATE TABLE recipe_foods(
 );
 
 
+
+
+#### Old tables. Or what should be used now..
+
+CREATE TABLE mealfoods(
+    id              INTEGER PRIMARY KEY ASC AUTOINCREMENT,
+    meal_date       INTEGER NOT NULL,
+    meal            INTEGER NOT NULL,
+    NDB_No          INTEGER,
+    mhectograms     REAL NOT NULL);
