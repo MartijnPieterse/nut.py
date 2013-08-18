@@ -1,0 +1,91 @@
+
+
+
+The use database is build up from the following tables:
+All TEXT must be ASCII (32-96 ofzo..)
+Maybe different databases for different things.
+USDA.sqlite
+NEVO.sqlite
+USER.sqlite (user can be any username)
+
+Make a top level food database? id -> nevo or usda?
+
+CREATE TABLE usda_food_group(
+    id                  INTEGER PRIMARY KEY,
+    description         TEXT
+);
+
+CREATE TABLE nevo_food_group(
+    id                  INTEGER PRIMARY KEY,
+    description         TEXT
+);
+
+CREATE TABLE usda_nutr_definitions(
+);
+
+CREATE TABLE nevo_nutr_definitions(
+);
+
+CREATE TABLE usda_food_description(
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    ndb_no              INT UNIQUE,
+    food_group          INT,
+    description         TEXT,
+    description_short   TEXT,
+    description_refuse  TEXT,
+    refuse              INTEGER DEFAULT 0,
+    Pro_Factor          REAL DEFAULT 4.0,
+    Fat_Factor          REAL DEFAULT 9.0,
+    CHO_Factor          REAL DEFAULT 4.0,
+    ..
+    All fields          REAL DEFAULT NULL,
+
+
+    FOREIGN KEY(food_group) REFERENCES usda_food_group(id)
+);
+
+CREATE TABLE nevo_food_description(
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    nevo_no             INT UNIQUE,
+    food_group          INT,
+    description         TEXT,
+    manufacturer        TEXT,
+    comment             TEXT,
+    refuse              INTEGER DEFAULT 0,
+    Pro_Factor          REAL DEFAULT 4.0,
+    Fat_Factor          REAL DEFAULT 9.0,
+    CHO_Factor          REAL DEFAULT 4.0,
+
+    ..
+    All fields          REAL DEFAULT NULL,
+
+
+    FOREIGN KEY(food_group) REFERENCES nevo_food_group(id)
+);
+
+CREATE TABLE mealfoods(
+    id              INTEGER PRIMARY KEY ASC AUTOINCREMENT,
+    date            INTEGER NOT NULL,
+    meal            INTEGER NOT NULL,
+    food_id         INTEGER,
+    hgrams          REAL NOT NULL,
+
+    FOREIGN KEY(food_id) REFERENCES usda_food_description(id)
+);
+
+
+CREATE TABLE recipes(
+    id              INTEGER PRIMARY KEY ASC AUTOINCREMENT,
+    name            TEXT NOT NULL
+);
+
+CREATE TABLE recipe_foods(
+    recipe_id       INTEGER,
+    food_id         INTEGER,
+    hgrams          REAL NOT NULL
+
+    FOREIGN KEY(recipe_id) REFERENCES recipes(id),
+    FOREIGN KEY(food_id)   REFERENCES usda_food_description(id)
+);
+
+

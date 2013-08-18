@@ -10,6 +10,8 @@ o Show dates with meals as bold in date chooser
   Kan, maar wel opletten met "maand change..."
   Ook "vandaag" moet duidelijker.
 o Add more "assert" statements.
+o Add cache for small SQL requests. (like food group description)
+o Mixing sql query results..
 
 
 Priority MEDIUM

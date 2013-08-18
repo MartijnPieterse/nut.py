@@ -199,6 +199,20 @@ def sqlAddRecipe(name, foods):
     cur.execute(sql)
     con.commit()
 
+def sqlGetFoodGroupName(food_group):
+    assert type(food_group) == int
+
+    sql = "SELECT FdGrp_Desc FROM fd_group WHERE FdGrp_Cd == %d" % (food_group)
+    cur.execute(sql)
+
+    data = cur.fetchone()
+
+    result = None
+
+    if data != None:
+        result = data[0]
+
+    return result
 
 # Database creation / import.
 
@@ -667,7 +681,9 @@ class viewfoodTab:
         self.ls_search_results = gtk.ListStore(gobject.TYPE_INT, gobject.TYPE_STRING)
 
         t = builder.get_object("treeview_vft_searchresult")
-        t.set_model(self.ls_search_results)
+        ### UNDO t.set_model(self.ls_search_results)
+        self.ts_search_results = gtk.TreeStore(gobject.TYPE_INT, gobject.TYPE_STRING)
+        t.set_model(self.ts_search_results)
 
         column = gtk.TreeViewColumn("Matched foods:")
         t.append_column(column)
@@ -694,6 +710,60 @@ class viewfoodTab:
         self.builder.get_object("adjustment1").set_all(0.0, 0.0, 0.0, 1.0, 10.0, 0.0)
 
         self.date = dateHandler(builder, builder.get_object("table_dateselect"))
+
+        self.fillAllFoods()
+
+    def fillAllFoods(self):
+        # TODO
+        con = sqlite3.connect("nut.sqlite")
+        cur = con.cursor()
+
+        t = builder.get_object("treeview_vft_searchresult")
+        t.set_model(self.ts_search_results)
+
+        sql = "SELECT NDB_No,Long_Desc,FdGrp_Cd FROM food_des ORDER BY FdGrp_Cd,Long_Desc"
+        cur.execute(sql)
+
+
+        # Current food group
+        cur_fd_group = -1
+        iterator = None
+
+        # Create Tree with food groups.
+        data = cur.fetchone()
+
+        while data != None:
+                          
+            new_fd_group = int(data[2])
+
+            if new_fd_group != cur_fd_group:
+                 iterator = self.ts_search_results.append(None)
+                 self.ts_search_results.set_value(iterator, 0, -1)
+                 name = sqlGetFoodGroupName(new_fd_group)
+                 self.ts_search_results.set_value(iterator, 1, sqlGetFoodGroupName(new_fd_group))
+                 cur_fd_group = new_fd_group
+
+
+
+            n = self.ts_search_results.append(iterator)
+            self.ts_search_results.set_value(n, 0, data[0])
+            self.ts_search_results.set_value(n, 1, data[1])
+
+            
+
+
+            data = cur.fetchone()
+
+
+##         i = self.ts_search_results.append(None)
+#         self.ts_search_results.set_value(i, 0, 4)
+#         self.ts_search_results.set_value(i, 1, "Food Item")
+#
+#         for j in xrange(5):
+#             n = self.ts_search_results.append(i)
+#             self.ts_search_results.set_value(n, 0, 4)
+#             self.ts_search_results.set_value(n, 1, "Subfood Item %d" % (j))
+
 
     def onAdd2Meal(self, button):
         if self.food_id == -1:
@@ -729,6 +799,9 @@ class viewfoodTab:
         enable = False
 
         if len(e) >= 3:
+            t = self.builder.get_object("treeview_vft_searchresult")
+            t.set_model(self.ls_search_results)
+
             sql = "SELECT NDB_No,Long_Desc FROM food_des WHERE Long_Desc LIKE \"%" + entry.get_text() + "%\""
             cur.execute(sql)
 
@@ -748,6 +821,9 @@ class viewfoodTab:
                 i = self.ls_search_results.append()
                 self.ls_search_results.set_value(i, 0, data[0])
                 self.ls_search_results.set_value(i, 1, data[1])
+        else:
+            self.fillAllFoods()
+
 
     #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     def onFoodChanged(self, food_id):
@@ -933,7 +1009,7 @@ class viewMealsTab:
             recipe_foods.append([food_id, food_hg])
 
         dialogWindow = gtk.MessageDialog(type=gtk.MESSAGE_QUESTION, buttons=gtk.BUTTONS_OK_CANCEL)
-        dialogWindow.set_markup("Enter recipe name:")
+        dialogWindow.set_markup("Enter recipe name:\nUse comma as delimeter for bla")
 
         dialogWindow.set_title("Create Recipe")
 
