@@ -3,6 +3,8 @@ Priority HIGH
 
 o Add chosen food to meal
   Partly done, cannot select meal yet.
+o make named meals.
+  Breakfast / Lunch / Dinner / Snacks
 o Show nutrients for numerous days
   Standaard 1 dag. Checkbox voor meerdere dagen, dan ook gui aanpassen..
   Met start/eind
@@ -12,6 +14,8 @@ o Show dates with meals as bold in date chooser
 o Add more "assert" statements.
 o Add cache for small SQL requests. (like food group description)
 o Mixing sql query results..
+o Static "sql Class" instead of funcitons using global variables.
+o Same for user. Both can be used like sql. or user.
 
 
 Priority MEDIUM

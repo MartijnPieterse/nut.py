@@ -19,7 +19,20 @@ except:
 import gobject
 import datetime
 
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class sqlNut:
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Purpose:
+#   One point of control for sqlite
 
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    def __init__(self):
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # Purpose:
+    #   Open database
+    # Input:
+    #   SQL reference
+        pass
 
 
 # TODO Make "data" class. Which is to be used to retrieve all data.
@@ -29,15 +42,15 @@ con = None
 con = sqlite3.connect("nut.sqlite")
 cur = con.cursor()
 
-sql = "SELECT Tagname,Units FROM nutr_def"
-cur.execute(sql)
-
-all_food_nutr = []
-while True:
-    data = cur.fetchone()
-
-    if data == None: break
-    all_food_nutr.append((data[0], data[1]))
+#sql = "SELECT Tagname,Units FROM nutr_def"
+#cur.execute(sql)
+#
+#all_food_nutr = []
+#while True:
+#    data = cur.fetchone()
+#
+#    if data == None: break
+#    all_food_nutr.append((data[0], data[1]))
 
 def sqlGetNutrName(id):
     sql = "SELECT NutrDesc FROM nutr_def WHERE Nutr_No=" + repr(id)
