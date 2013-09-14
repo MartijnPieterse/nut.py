@@ -112,7 +112,7 @@ def sqlGetFoodNutrientValue(food_id, field_ids):
     return result
 
 def sqlGetFoodNutrientValues(food_ids, field_ids):
-    sql = "SELECT "
+    sql = "SELECT NDB_No,"
 
     for field in field_ids:
         sql += sqlGetNutrTagName(field) + ","
@@ -125,19 +125,18 @@ def sqlGetFoodNutrientValues(food_ids, field_ids):
     sql = sql.rstrip(",") + ")"
 
     cur.execute(sql)
-    data = cur.fetchone()
-
-    # Should be only one!
 
     results = {}
 
-    # TODO Check food_ids from sql output...
-    for fi in food_ids:
+    data = cur.fetchone()
+    while data != None:
+        fi = data[0]
         result = {}
-        for n in zip(field_ids,data):
+        for n in zip(field_ids,data[1:]):
             result[n[0]] = n[1]
 
         results[fi] = result
+        data = cur.fetchone()
 
     return results
 
@@ -226,6 +225,14 @@ def sqlGetFoodGroupName(food_group):
         result = data[0]
 
     return result
+
+def sqlGetMaxNDB_No():
+    sql = "SELECT MAX(NDB_No) FROM food_des"
+    cur.execute(sql)
+
+    data = cur.fetchone()
+
+    return data[0]
 
 # Database creation / import.
 
@@ -338,6 +345,88 @@ layout2 = [ [ "Daily %", [ [  208,  205,  203 ],        # TODO, dit is allemaal 
                            [ 2005, 2008, None ],
                            [  601,  430,   -2 ] ] ],
 
+            [ "Nutrients", [ [  208,  205,  203 ],
+                             [   -1,  291, 2000 ],
+                             [ None, None, None ],
+                             [  204,  401,  301 ],
+                             [  606,  404,  312 ],
+                             [  645,  405,  303 ],
+                             [  646,  406,  304 ],
+                             [ 2006,  410,  315 ],
+                             [ 2001,  415,  305 ],
+                             [ 2002,  431,  306 ],
+                             [ 2007,  418,  317 ],
+                             [ 2003,  318,  307 ],
+                             [ 2004,  324,  309 ],
+                             [ 2005, 2008, None ],
+                             [  601,  430,   -2 ] ] ],
+
+            [ "Carbs & Amino Acids", [ [ None, None, None ],
+                                       [ None, None, None ],
+                                       [  205,  203,  504 ],
+                                       [  291,  257,  505 ],
+                                       [  209,  513,  506 ],
+                                       [  269,  511,  508 ],
+                                       [  212,  514,  517 ],
+                                       [  287,  507,  518 ],
+                                       [  211,  515,  502 ],
+                                       [  213,  516,  501 ],
+                                       [  214,  512,  509 ],
+                                       [  210,  521,  510 ],
+                                       [ None,  503, None ],
+                                       [ None, None, None ],
+                                       [ None, None, None ] ] ],
+
+             [ "Miscellaneous", [ [ None, None, None ],
+                                  [  268,  319,  343 ],
+                                  [  207,  320,  322 ],
+                                  [  255,  325,  321 ],
+                                  [  262,  326,  334 ],
+                                  [  263,  328,  338 ],
+                                  [  221,  578,  337 ],
+                                  [  313,  573,  601 ],
+                                  [  454,  429,  636 ],
+                                  [  421,  428,  641 ],
+                                  [  431,  323,  639 ],
+                                  [  432,  341,  638 ],
+                                  [  435,  342, None ],
+                                  [ None, None, None ],
+                                  [ None, None, None ] ] ],
+
+             [ "Sat & Mono FA", [ [  606, None ],
+                                  [  607,  645 ],
+                                  [  608,  625 ],
+                                  [  609,  697 ],
+                                  [  610,  626 ],
+                                  [  611,  673 ],
+                                  [  696,  687 ],
+                                  [  612,  617 ],
+                                  [  652,  674 ],
+                                  [  613,  628 ],
+                                  [  653,  630 ],
+                                  [  614,  676 ],
+                                  [  615,  671 ],
+                                  [  624, None ],
+                                  [  654, None ] ] ],
+
+             [ "Poly & Trans FA", [ [ None, None, None ],
+                                    [ None, None,  605 ],
+                                    [ None,  689,  693 ],
+                                    [  646,  852,  662 ],
+                                    [  618,  853,  663 ],
+                                    [  672,  620,  859 ],
+                                    [  619,  855,  664 ],
+                                    [  851,  629,  695 ],
+                                    [  685,  857,  666 ],
+                                    [  627,  858,  665 ],
+                                    [  672,  631,  669 ],
+                                    [ None,  621,  670 ],
+                                    [ None, None,  856 ],
+                                    [ None, None, None ],
+                                    [ None, None, None ] ] ]
+         ]
+
+layout2_editable = [ 
             [ "Nutrients", [ [  208,  205,  203 ],
                              [   -1,  291, 2000 ],
                              [ None, None, None ],
@@ -564,11 +653,10 @@ class nutritionTabs:
             for fid,weight in zip(mf,mw):
                 value = v[fid][fields[0]]
                 if value != None:
-                    value *= weight
                     if total_value == None:
-                        total_value = value
+                        total_value = value * weight
                     else:
-                        total_value += value
+                        total_value += value * weight
 
             if total_value == None:
                 label.set_text("(no data)")
@@ -580,6 +668,105 @@ class nutritionTabs:
 
     def redraw(self):
         self.notebook_widget.queue_draw()
+
+
+class nutritionTabsEditable:
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Purpose:
+#   Created a notebook with all the nutritionfields in the tabs.
+#   Has a update function.
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    def __init__(self, parent, layout, user):
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # Purpose:
+    #   Create Notebook
+    #       Create Tabs (according to given layout)
+    #       Create nutrient fields (according to the given layout)
+    #   Store the user for conversions.
+
+        assert type(parent) == gtk.Table
+
+        self.user = user            # TODO Unused.
+        self.parent = parent
+        self.layout = layout
+        self.crossref = []
+
+        # Create notebook.
+        self.notebook_widget = gtk.Notebook()
+
+        for tabdata in layout:
+            # Create label for tab
+            tabnamelabel = gtk.Label()
+            tabnamelabel.set_text(tabdata[0])
+
+            # Create content for tab
+            tabcontent = gtk.Table()
+
+            # Set size. Need 3 columns for every field.
+            rows = len(tabdata[1])
+            columns = len(tabdata[1][0])
+            tabcontent.resize(columns*3, rows)
+
+            for row in xrange(rows):
+                for column in xrange(columns):
+                    nutrient_id = tabdata[1][row][column]
+
+                    label_description = gtk.Label()
+                    label_units       = gtk.Label()
+
+
+                    if nutrient_id == None:
+                        # Empty field.
+                        label_value       = gtk.Label()
+                        pass
+                    elif nutrient_id < 0:
+                        # TODO
+                        label_description.set_text("***Special***")
+                        label_value       = gtk.Label()
+                    else:
+                        label_value       = gtk.Entry()
+                        label_description.set_text(sqlGetNutrName(nutrient_id))
+                        label_value.set_alignment(1.0)
+                        label_units.set_text(" "+sqlGetNutrUnit(nutrient_id))
+                        label_units.set_alignment(0.0, 0.5)
+
+                        # Store for later reference.
+                        # Note: nutrient_id could be present more than once.
+                        self.crossref.append([nutrient_id, label_value])
+
+                    top    = row
+                    bottom = row+1
+                    left   = column*3
+                    right  = column*3+1
+
+                    tabcontent.attach(label_description, left,   right,   top, bottom)
+                    tabcontent.attach(label_value,       left+1, right+1, top, bottom)
+                    tabcontent.attach(label_units,       left+2, right+2, top, bottom)
+
+            self.notebook_widget.append_page(tabcontent, tabnamelabel)
+
+        parent.attach(self.notebook_widget, 0, 1, 0, 1)
+
+    def getFieldsValues(self):
+
+        fields = ""
+        values = ""
+
+        for c in self.crossref:
+            v = c[1].get_text()
+
+            if len(v) > 0:
+                #print sqlGetNutrTagName(c[0]),v
+
+                # TODO check
+                vf = float(v)
+
+                fields += sqlGetNutrTagName(c[0]) + ", "
+                values += "%f, " % (vf)
+
+
+        return fields[:-2],values[:-2]
 
 
 
@@ -867,21 +1054,25 @@ class viewfoodTab:
             # Update combobox
 
             self.ls_combobox.clear()
-            w = sqlGetWeightFor(self.food_id)
-            for i in w:
-                self.ls_combobox.append([i[0], i[1], i[2]])
-            self.combobox.set_active(0)
-            self.spinbutton.set_value(float(w[0][1]))
 
-            amount = w[0][1]
+            if self.food_id != -1:
+                w = sqlGetWeightFor(self.food_id)
+                for i in w:
+                    self.ls_combobox.append([i[0], i[1], i[2]])
+                self.combobox.set_active(0)
+                self.spinbutton.set_value(float(w[0][1]))
 
-            # Set multiplier
-            self.hgrams = float(w[0][2])
+                amount = w[0][1]
 
-            self.nut_tab.sql_update(self.food_id, self.hgrams)
+                # Set multiplier
+                self.hgrams = float(w[0][2])
 
-        # TODO, adjustment should vary with chosen unit.
-        self.builder.get_object("adjustment1").set_all(amount, 0.0, 1000.0, 1.0, 10.0, 0.0)
+                self.nut_tab.sql_update(self.food_id, self.hgrams)
+                self.builder.get_object("adjustment1").set_all(amount, 0.0, 1000.0, 1.0, 10.0, 0.0)
+            else:
+                self.spinbutton.set_value(0.0)
+                self.builder.get_object("adjustment1").set_all(amount, 0.0, 0.0, 0.0, 0.0, 0.0)
+
 
     def combobox_changed_cb(self, e):
 
@@ -926,6 +1117,83 @@ class viewfoodTab:
             self.nut_tab.sql_update(self.food_id, self.hgrams)
 
         return False
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class addfoodTab:
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Purpose:
+#   Handles the whole "View Foods" tab.
+#   Arrange all nutrients when in the View Foods tab.
+#
+
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    def __init__(self, builder):
+    #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # Purpose:
+    #   Initialize.
+    # Input:
+    #   SQL reference??
+    #   Nutrients widget?? or complete builder??
+
+        # Belangrijke zaken
+        self.food_id = -1
+        self.hgrams = 0.0
+
+        # TODO Temporary?
+        self.builder = builder
+
+        ### Setup widgets that cannot be done in Glade for some reason.
+
+        # Setup the combobox for the serving size
+
+        self.nut_tab = nutritionTabsEditable(builder.get_object("editFood"), layout2_editable, None )
+
+        self.builder.get_object("af_save_button").connect("clicked", self.saveFood)
+
+
+    def saveFood(self, b):
+        print "about to save."
+
+        if self.food_id == -1:
+            # Find free food id
+            self.food_id = sqlGetMaxNDB_No()
+
+            if self.food_id < 100000:
+                self.food_id = 100000
+            else: self.food_id += 1
+
+        shortd = self.builder.get_object("af_shortdescr_entry").get_text()
+        longd  = self.builder.get_object("af_longdescr_entry").get_text()
+
+        if len(longd) == 0: longd = shortd
+
+        sql_fields = "(ndb_no, fdgrp_cd, long_desc, shrt_desc, "
+
+        sql_values  = "(%d" % (self.food_id)
+        sql_values += ", 9999, \"" + shortd + "\""
+        sql_values += ", \"" + longd + "\", "
+
+
+        f, v = self.nut_tab.getFieldsValues()
+
+        sql_fields += f + ")"
+        sql_values += v + ")"
+
+        sql = "INSERT INTO food_des " + sql_fields + " VALUES " + sql_values
+
+        print sql
+        cur.execute(sql)
+        con.commit()
+
+        sql  = "INSERT INTO weight ( NDB_No, Seq, Amount, Msre_Desc, whectograms, origSeq, origAmount, orighectograms) "
+        sql += "VALUES (%d,99,100.0,\"grams\",1.0,99,100.0,1.0)" % (self.food_id)
+        print sql
+        cur.execute(sql)
+        con.commit()
+
+        # TODO Clear all... Or make update button active... don't know.
+
+        self.food_id = -1
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1128,6 +1396,7 @@ class topNotebook:
 
         self.vf = viewfoodTab(builder)
         self.vm = viewMealsTab(builder)
+        self.af = addfoodTab(builder)
 
 
         builder.get_object("notebook3").connect("switch-page", self.noteBookChange)
